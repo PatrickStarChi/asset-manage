@@ -592,7 +592,7 @@ async function showQRCode(id) {
     const asset = await assetRes.json();
     const qrData = await qrRes.json();
     
-    const baseUrl = 'https://assetmanage.patrickstar.top';
+    const baseUrl = window.location.origin;
     const assetUrl = `${baseUrl}/asset/${id}`;
     
     const content = document.getElementById('asset-detail-content');
@@ -1005,7 +1005,7 @@ async function openQRCode(id) {
     const asset = await assetRes.json();
     const qrData = await qrRes.json();
     
-    const baseUrl = 'https://assetmanage.patrickstar.top';
+    const baseUrl = window.location.origin;
     const assetUrl = `${baseUrl}/asset/${id}`;
     
     const content = document.getElementById('qrcode-content');
@@ -1761,7 +1761,8 @@ async function loadAssets() {
     
     const tbody = document.getElementById('assets-table-body');
     if (tbody) {
-      if (assets.length === 0) {
+      if (!Array.isArray(assets)) { console.error("API 返回错误:", assets); tbody.innerHTML = "<tr><td colspan="7" class="empty-state">加载失败，请重新登录</td></tr>"; return; }
+    if (assets.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" class="empty-state">暂无资产数据</td></tr>';
         return;
       }
