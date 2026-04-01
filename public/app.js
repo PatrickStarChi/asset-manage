@@ -594,6 +594,7 @@ async function showQRCode(id) {
     
     const baseUrl = window.location.origin;
     const assetUrl = `${baseUrl}/asset/${id}`;
+    const downloadName = qrData.download?.filename || `${asset.name}-二维码.png`;
     
     const content = document.getElementById('asset-detail-content');
     content.innerHTML = `
@@ -601,11 +602,13 @@ async function showQRCode(id) {
         <h3 style="margin-bottom: 20px;">${asset.name} - 二维码</h3>
         <div style="background: white; padding: 20px; border-radius: 10px; display: inline-block; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
           <img src="${qrData.qrCode}" alt="QR Code" style="max-width: 250px;">
+          <div style="margin-top: 15px; font-size: 16px; font-weight: bold; color: #2c3e50;">${asset.name}</div>
         </div>
         <p style="margin-top: 20px; font-size: 14px; color: #7f8c8d; word-break: break-all;">${assetUrl}</p>
         <p style="margin-top: 10px; font-size: 13px; color: #667eea;">📱 扫码进入领用表单页面</p>
         <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
           <a href="/asset/${id}" target="_blank" class="btn btn-primary" style="display: inline-block; text-decoration: none;">🔗 打开领用页面</a>
+          <button class="btn btn-success" onclick="downloadQRCode('${qrData.qrCode}', '${downloadName}')">💾 下载二维码</button>
           <button class="btn btn-secondary" onclick="closeModal('assetDetailModal')">关闭</button>
         </div>
       </div>
@@ -617,6 +620,16 @@ async function showQRCode(id) {
     alert('加载失败');
   }
 }
+
+// 下载二维码
+function downloadQRCode(dataURL, filename) {
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = dataURL;
+  link.click();
+}
+
+// 显示资产出入库记录
 
 // 显示资产出入库记录
 async function showAssetTransactions(assetId) {

@@ -186,6 +186,7 @@ app.get('/api/assets/:id/qrcode', async (req, res) => {
     const baseUrl = 'https://assetmanage.patrickstar.top';
     const assetUrl = `${baseUrl}/asset/${row.id}`;
     try {
+      // 生成二维码
       const qrCodeImage = await QRCode.toDataURL(assetUrl, {
         width: 300,
         margin: 2,
@@ -194,7 +195,17 @@ app.get('/api/assets/:id/qrcode', async (req, res) => {
           light: '#ffffff'
         }
       });
-      res.json({ qrCode: qrCodeImage, asset: row, url: assetUrl });
+      
+      // 返回二维码数据和下载信息
+      res.json({ 
+        qrCode: qrCodeImage, 
+        asset: row, 
+        url: assetUrl,
+        download: {
+          filename: `${row.name}-二维码.png`,
+          name: row.name
+        }
+      });
     } catch (err) {
       res.status(500).json({ error: '二维码生成失败' });
     }
