@@ -4,6 +4,18 @@ let cameraStream = null;
 let currentUser = null;
 let currentAssetId = null; // 当前操作的资产 ID
 let currentSortBy = 'id';
+
+// 获取分类颜色
+function getCategoryColor(category) {
+  const colors = {
+    "文具用品": "#3498db",
+    "办公设备": "#2ecc71",
+    "耗材": "#e74c3c",
+    "其他": "#95a5a6"
+  };
+  return colors[category] || "#3498db";
+}
+
 let currentSortOrder = 'desc';
 
 // 加载控制台
@@ -204,35 +216,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 检查登录状态
 async function checkAuth() {
-  const token = localStorage.getItem('token');
-  const userStr = localStorage.getItem('user');
+  const token = localStorage.getItem("token");
+  const userStr = localStorage.getItem("user");
   
   if (token && userStr) {
     try {
       currentUser = JSON.parse(userStr);
-      
-      // 验证 token 是否有效
-      const res = await fetch('/api/auth/me', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (res.ok) {
-        const userData = await res.json();
-        currentUser = userData;
-        showUserInfo(currentUser);
-        console.log('✅ 登录状态有效');
-        return;
-      }
+      showUserInfo(currentUser);
+      console.log("✅ 已登录");
+      return;
     } catch (err) {
-      console.error('验证 token 失败:', err);
+      console.error("解析用户数据失败:", err);
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
     }
   }
   
-  // 未登录，跳转到登录页面或显示登录框
-  console.log('⚠️ 未登录，请登录后查看');
-  // 如果当前不在登录页面，显示登录提示
-  if (!window.location.pathname.includes('login')) {
-    showLoginModal();
+  // 未登录，跳转到登录页
+  if (window.location.pathname !== "/login.html") {
+    window.location.href = "/login.html";
   }
 }
 
@@ -507,8 +509,10 @@ async function loadCategories() {
 
 // 加载资产用于筛选
 async function loadAssetsForFilter() {
+  const token = localStorage.getItem("token");
+  const headers = token ? { "Authorization": "Bearer " + token } : {};
   try {
-    const res = await fetch('/api/assets');
+    const res = await fetch('/api/assets', { headers });
     const assets = await res.json();
     
     const assetFilter = document.getElementById('transaction-asset-filter');
@@ -1230,7 +1234,7 @@ async function loadTransactionsByType(type, tbodyId, prefix) {
     if (dateStart) url += `date_start=${dateStart}&`;
     if (dateEnd) url += `date_end=${dateEnd}&`;
     
-    const res = await fetch(url);
+    const res = await fetch(url, { headers });
     const transactions = await res.json();
     
     // 前端搜索过滤（按名称或 ID）
@@ -1738,6 +1742,8 @@ function toggleSort(field) {
 
 // 加载资产列表
 async function loadAssets() {
+  const token = localStorage.getItem("token");
+  const headers = token ? { "Authorization": "Bearer " + token } : {};
   try {
     const search = document.getElementById('search-input')?.value || '';
     const category = document.getElementById('category-filter')?.value || '';
@@ -1745,7 +1751,7 @@ async function loadAssets() {
     let url = '/api/assets?search=' + encodeURIComponent(search) + '&category=' + encodeURIComponent(category);
     url += '&sort=' + encodeURIComponent(currentSort.field) + '&order=' + encodeURIComponent(currentSort.order);
     
-    const res = await fetch(url);
+    const res = await fetch(url, { headers });
     const assets = await res.json();
     
     const tbody = document.getElementById('assets-table-body');

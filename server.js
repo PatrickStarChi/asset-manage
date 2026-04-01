@@ -52,7 +52,7 @@ initDatabase()
 // ============ 资产 API ============
 
 // 获取所有资产
-app.get('/api/assets', (req, res) => {
+app.get('/api/assets', authMiddleware, (req, res) => {
   const { category, search, sort, order } = req.query;
   let query = 'SELECT * FROM assets WHERE 1=1';
   const params = [];
@@ -309,13 +309,13 @@ app.post('/api/transactions/out', (req, res) => {
     }
     
     // 检查最低库存限制
-    const minStock = asset.min_stock || 5;
+    const minStock = asset.min_quantity || 5;
     const remainingAfterOut = asset.quantity - quantity;
     if (remainingAfterOut < minStock) {
       res.status(400).json({ 
         error: `出库后库存 (${remainingAfterOut}) 将低于最低库存 (${minStock})`,
         available: asset.quantity - minStock,
-        min_stock: minStock
+        min_quantity: minStock
       });
       return;
     }
@@ -594,7 +594,7 @@ app.delete('/api/users/:id', authMiddleware, (req, res) => {
 
 // 更新资产
 app.put('/api/assets/:id', authMiddleware, (req, res) => {
-  const { name, category, quantity, unit, location, description, min_stock } = req.body;
+  const { name, category, quantity, unit, location, description, min_quantity } = req.body;
   const assetId = req.params.id;
   
   if (!name || !category) {
@@ -603,8 +603,8 @@ app.put('/api/assets/:id', authMiddleware, (req, res) => {
   }
   
   db.run(
-    `UPDATE assets SET name = ?, category = ?, quantity = ?, unit = ?, location = ?, description = ?, min_stock = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-    [name, category, quantity, unit, location, description, min_stock || 5, assetId],
+    `UPDATE assets SET name = ?, category = ?, quantity = ?, unit = ?, location = ?, description = ?, min_quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+    [name, category, quantity, unit, location, description, min_quantity || 5, assetId],
     function(err) {
       if (err) {
         res.status(500).json({ error: err.message });
@@ -692,7 +692,7 @@ app.get('/api/export/assets', authMiddleware, async (req, res) => {
       { header: '单位', key: 'unit', width: 10 },
       { header: '位置', key: 'location', width: 20 },
       { header: '描述', key: 'description', width: 30 },
-      { header: '最低库存', key: 'min_stock', width: 12 },
+      { header: '最低库存', key: 'min_quantity', width: 12 },
       { header: '更新时间', key: 'updated_at', width: 20 }
     ];
     
@@ -1074,12 +1074,12 @@ app.get('/api/stats/fastest-consumption', authMiddleware, (req, res) => {
   });
 });
 
-// 仪表盘统计 API - 低库存预警（基于 min_stock）
+// 仪表盘统计 API - 低库存预警（基于 min_quantity）
 app.get('/api/stats/low-stock-warning', authMiddleware, (req, res) => {
   db.all(`
-    SELECT id, name, category, quantity, min_stock, (quantity - min_stock) as diff
+    SELECT id, name, category, quantity, min_quantity, (quantity - min_quantity) as diff
     FROM assets
-    WHERE quantity <= min_stock
+    WHERE quantity <= min_quantity
     ORDER BY diff ASC
   `, (err, rows) => {
     if (err) {
