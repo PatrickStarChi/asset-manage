@@ -1854,6 +1854,27 @@ async function loadInTransactions() {
   const search = document.getElementById('in-search-input')?.value || '';
   const dateStart = document.getElementById('in-date-start')?.value || '';
   const dateEnd = document.getElementById('in-date-end')?.value || '';
+  const assetId = document.getElementById('in-asset-filter')?.value || '';
+  
+  // 加载物品筛选器（如果是第一次加载）
+  const assetFilter = document.getElementById('in-asset-filter');
+  if (assetFilter && assetFilter.options.length === 1) {
+    try {
+      const res = await fetch('/api/assets', {
+        headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+      });
+      const assets = await res.json();
+      assetFilter.innerHTML = '<option value="">全部物品</option>';
+      assets.forEach(asset => {
+        const option = document.createElement('option');
+        option.value = asset.id;
+        option.textContent = `${asset.name} (${asset.quantity}${asset.unit})`;
+        assetFilter.appendChild(option);
+      });
+    } catch (err) {
+      console.error('加载物品列表失败:', err);
+    }
+  }
   
   let url = '/api/transactions?type=in';
   if (dateStart) url += '&date_start=' + dateStart;
@@ -1863,6 +1884,11 @@ async function loadInTransactions() {
     headers: token ? { 'Authorization': 'Bearer ' + token } : {}
   });
   let transactions = await res.json();
+  
+  // 筛选物品
+  if (assetId) {
+    transactions = transactions.filter(t => t.asset_id.toString() === assetId);
+  }
   
   // 前端搜索（按物品名称或 ID）
   if (search) {
@@ -1884,6 +1910,27 @@ async function loadOutTransactions() {
   const search = document.getElementById('out-search-input')?.value || '';
   const dateStart = document.getElementById('out-date-start')?.value || '';
   const dateEnd = document.getElementById('out-date-end')?.value || '';
+  const assetId = document.getElementById('out-asset-filter')?.value || '';
+  
+  // 加载物品筛选器（如果是第一次加载）
+  const assetFilter = document.getElementById('out-asset-filter');
+  if (assetFilter && assetFilter.options.length === 1) {
+    try {
+      const res = await fetch('/api/assets', {
+        headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+      });
+      const assets = await res.json();
+      assetFilter.innerHTML = '<option value="">全部物品</option>';
+      assets.forEach(asset => {
+        const option = document.createElement('option');
+        option.value = asset.id;
+        option.textContent = `${asset.name} (${asset.quantity}${asset.unit})`;
+        assetFilter.appendChild(option);
+      });
+    } catch (err) {
+      console.error('加载物品列表失败:', err);
+    }
+  }
   
   let url = '/api/transactions?type=out';
   if (dateStart) url += '&date_start=' + dateStart;
@@ -1893,6 +1940,11 @@ async function loadOutTransactions() {
     headers: token ? { 'Authorization': 'Bearer ' + token } : {}
   });
   let transactions = await res.json();
+  
+  // 筛选物品
+  if (assetId) {
+    transactions = transactions.filter(t => t.asset_id.toString() === assetId);
+  }
   
   // 前端搜索（按物品名称或 ID）
   if (search) {
