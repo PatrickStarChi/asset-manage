@@ -63,7 +63,7 @@ async function loadDashboard() {
             lowStockContainer.innerHTML = warning.map(item => 
               "<div class=\"low-stock-item\" style=\"background:#fee;color:#e74c3c;\">" +
               "<span class=\"name\">" + item.name + "</span>" +
-              "<span class=\"quantity\">库存：" + item.quantity + " (最低：" + (item.min_stock||5) + ")</span>" +
+              "<span class=\"quantity\">库存：" + item.quantity + " (最低：" + (item.min_quantity||5) + ")</span>" +
               "</div>"
             ).join("");
           } else {
@@ -259,7 +259,7 @@ function showUserInfo(user) {
   if (userInfo && userName && userDept) {
     userInfo.style.display = 'flex';
     userName.textContent = user.username;
-    userDept.textContent = user.department || user.role;
+    userDept.textContent = user.room_number || user.role;
   }
   
   // 仅管理员显示账号管理菜单
@@ -334,7 +334,7 @@ async function handleAddUser(e) {
     username: e.target.username.value,
     password: e.target.password.value,
     role: e.target.role.value,
-    department: e.target.department.value
+    room_number: e.target.room_number.value
   };
   
   try {
@@ -647,8 +647,8 @@ async function showAssetTransactions(assetId) {
                     <td>${t.id}</td>
                     <td><span class="badge badge-${t.type}">${t.type === 'in' ? '📥 入库' : '📤 出库'}</span></td>
                     <td style="font-weight:600;">${t.quantity}</td>
-                    <td>${t.operator || '-'}</td>
-                    <td>${t.remark || '-'}</td>
+                    <td>${t.person_name || '-'}</td>
+                    <td>${t.notes || '-'}</td>
                     <td>${new Date(t.created_at).toLocaleString('zh-CN')}</td>
                   </tr>
                 `).join('')}
@@ -683,7 +683,7 @@ async function openAssetDetail(id) {
     const res = await fetch(`/api/assets/${id}`);
     const asset = await res.json();
     
-    const minStock = asset.min_stock || 5;
+    const minStock = asset.min_quantity || 5;
     const available = Math.max(0, asset.quantity - minStock);
     
     // 填充详情数据
@@ -843,7 +843,7 @@ async function handleEditAssetInline(e) {
     unit: document.getElementById('edit-asset-unit-inline').value,
     location: document.getElementById('edit-asset-location-inline').value,
     description: document.getElementById('edit-asset-description-inline').value,
-    min_stock: parseInt(document.getElementById('edit-asset-min-stock-inline').value) || 5
+    min_quantity: parseInt(document.getElementById('edit-asset-min-stock-inline').value) || 5
   };
   
   const token = localStorage.getItem('token');
@@ -900,8 +900,8 @@ async function handleStockIn(e) {
   const data = {
     asset_id: parseInt(assetId),
     quantity: parseInt(formData.get('quantity')),
-    operator: currentUser?.username || '管理员',
-    remark: formData.get('remark') || '入库'
+    person_name: currentUser?.username || '管理员',
+    notes: formData.get('notes') || '入库'
   };
   
   const token = localStorage.getItem('token');
@@ -937,7 +937,7 @@ async function openStockOut(id) {
     const res = await fetch(`/api/assets/${id}`);
     const asset = await res.json();
     
-    const minStock = asset.min_stock || 5;
+    const minStock = asset.min_quantity || 5;
     const available = Math.max(0, asset.quantity - minStock);
     
     document.getElementById('stock-out-asset-id').value = id;
@@ -962,9 +962,9 @@ async function handleStockOut(e) {
   const data = {
     asset_id: parseInt(assetId),
     quantity: parseInt(formData.get('quantity')),
-    operator: currentUser?.username || '管理员',
-    department: formData.get('department') || '',
-    remark: formData.get('remark') || '领用'
+    person_name: currentUser?.username || '管理员',
+    room_number: formData.get('room_number') || '',
+    notes: formData.get('notes') || '领用'
   };
   
   const token = localStorage.getItem('token');
@@ -1059,9 +1059,9 @@ async function openTransactions(id) {
                   <td>${t.id}</td>
                   <td><span class="badge badge-${t.type}">${t.type === 'in' ? '📥 入库' : '📤 出库'}</span></td>
                   <td style="font-weight:600;">${t.quantity}</td>
-                  <td>${t.operator || '-'}</td>
-                  <td>${t.department || '-'}</td>
-                  <td>${t.remark || '-'}</td>
+                  <td>${t.person_name || '-'}</td>
+                  <td>${t.room_number || '-'}</td>
+                  <td>${t.notes || '-'}</td>
                   <td>${new Date(t.created_at).toLocaleString('zh-CN')}</td>
                 </tr>
               `).join('')}
@@ -1094,7 +1094,7 @@ async function handleEditAsset(e) {
     unit: document.getElementById('edit-asset-unit').value,
     location: document.getElementById('edit-asset-location').value,
     description: document.getElementById('edit-asset-description').value,
-    min_stock: parseInt(document.getElementById('edit-asset-min-stock').value) || 5
+    min_quantity: parseInt(document.getElementById('edit-asset-min-stock').value) || 5
   };
   
   const token = localStorage.getItem('token');
@@ -1189,8 +1189,8 @@ async function handleTransaction(e) {
   const data = {
     asset_id: parseInt(form.asset_id.value),
     quantity: parseInt(form.quantity.value),
-    operator: form.operator.value,
-    remark: form.remark.value
+    person_name: form.person_name.value,
+    notes: form.notes.value
   };
   
   try {
@@ -1263,9 +1263,9 @@ async function loadTransactionsByType(type, tbodyId, prefix) {
           <td>${trans.id}</td>
           <td>${trans.asset_name} <small style="color:#7f8c8d;">(#${trans.asset_id})</small></td>
           <td><span class="badge badge-${type}">${trans.quantity}</span></td>
-          <td>${trans.operator || '-'}</td>
-          <td>${trans.department || '-'}</td>
-          <td>${trans.remark || '-'}</td>
+          <td>${trans.person_name || '-'}</td>
+          <td>${trans.room_number || '-'}</td>
+          <td>${trans.notes || '-'}</td>
           <td>${new Date(trans.created_at).toLocaleString('zh-CN')}</td>
         </tr>
       `).join('');
@@ -1360,8 +1360,8 @@ async function confirmScanOut(assetId) {
       body: JSON.stringify({
         asset_id: assetId,
         quantity: quantity,
-        operator: '扫码登记',
-        remark: `${currentScanType === 'in' ? '扫码入库' : '扫码出库'}`
+        person_name: '扫码登记',
+        notes: `${currentScanType === 'in' ? '扫码入库' : '扫码出库'}`
       })
     });
     
@@ -1615,7 +1615,7 @@ async function processImport() {
           quantity: quantity,
           unit: row.getCell(5).value || '个',
           location: row.getCell(6).value || '',
-          remark: row.getCell(7).value || ''
+          notes: row.getCell(7).value || ''
         });
       }
     });
@@ -1798,7 +1798,7 @@ async function loadInTransactions() {
   const tbody = document.getElementById('transactions-in-body');
   if (tbody) {
     tbody.innerHTML = transactions.length === 0 ? '<tr><td colspan="7" class="empty-state">暂无记录</td></tr>' :
-      transactions.map(t => '<tr><td>' + t.id + '</td><td>' + t.asset_name + '</td><td>' + t.quantity + '</td><td>' + (t.operator||'-') + '</td><td>' + (t.department||'-') + '</td><td>' + (t.remark||'-') + '</td><td>' + new Date(t.created_at).toLocaleString('zh-CN') + '</td></tr>').join('');
+      transactions.map(t => '<tr><td>' + t.id + '</td><td>' + t.asset_name + '</td><td>' + t.quantity + '</td><td>' + (t.person_name||'-') + '</td><td>' + (t.room_number||'-') + '</td><td>' + (t.notes||'-') + '</td><td>' + new Date(t.created_at).toLocaleString('zh-CN') + '</td></tr>').join('');
   }
 }
 
@@ -1812,7 +1812,7 @@ async function loadOutTransactions() {
   const tbody = document.getElementById('transactions-out-body');
   if (tbody) {
     tbody.innerHTML = transactions.length === 0 ? '<tr><td colspan="7" class="empty-state">暂无记录</td></tr>' :
-      transactions.map(t => '<tr><td>' + t.id + '</td><td>' + t.asset_name + '</td><td>' + t.quantity + '</td><td>' + (t.operator||'-') + '</td><td>' + (t.department||'-') + '</td><td>' + (t.remark||'-') + '</td><td>' + new Date(t.created_at).toLocaleString('zh-CN') + '</td></tr>').join('');
+      transactions.map(t => '<tr><td>' + t.id + '</td><td>' + t.asset_name + '</td><td>' + t.quantity + '</td><td>' + (t.person_name||'-') + '</td><td>' + (t.room_number||'-') + '</td><td>' + (t.notes||'-') + '</td><td>' + new Date(t.created_at).toLocaleString('zh-CN') + '</td></tr>').join('');
   }
 }
 
