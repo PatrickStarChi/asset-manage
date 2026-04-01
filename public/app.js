@@ -334,7 +334,7 @@ async function handleAddUser(e) {
     username: e.target.username.value,
     password: e.target.password.value,
     role: e.target.role.value,
-    room_number: e.target.room_number.value
+    department: e.target.department.value || ""
   };
   
   try {

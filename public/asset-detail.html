@@ -182,9 +182,9 @@
         const availableStock = Math.max(0, currentAsset.quantity - minStock);
         
         const stockWarning = currentAsset.quantity <= minStock
-          ? `<div class="stock-warning">⚠️ 当前库存已达最低库存 (${minStock})，不可领用</div>`
+          ? `<div class="stock-warning" style="font-size: 18px; font-weight: bold;">⚠️ 当前库存已达最低库存 (${minStock})，不可领用</div>`
           : availableStock < 10
-          ? `<div class="stock-warning">⚠️ 可领用数量较少，仅剩 ${availableStock} ${currentAsset.unit}（保留 ${minStock} ${currentAsset.unit} 最低库存）</div>`
+          ? `<div class="stock-warning" style="font-size: 18px; font-weight: bold;">⚠️ 可领用数量较少，仅剩 ${availableStock} ${currentAsset.unit}（保留 ${minStock} ${currentAsset.unit} 最低库存）</div>`
           : '';
         
         document.getElementById('content').innerHTML = `
