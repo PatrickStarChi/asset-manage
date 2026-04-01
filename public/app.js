@@ -1761,7 +1761,7 @@ async function loadAssets() {
     
     const tbody = document.getElementById('assets-table-body');
     if (tbody) {
-      if (!Array.isArray(assets)) { console.error("API 返回错误:", assets); tbody.innerHTML = "<tr><td colspan="7" class="empty-state">加载失败，请重新登录</td></tr>"; return; }
+      if (!Array.isArray(assets)) { console.error("API 返回错误:", assets); tbody.innerHTML = '<tr><td colspan="7" class="empty-state">加载失败，请重新登录</td></tr>'; return; }
     if (assets.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" class="empty-state">暂无资产数据</td></tr>';
         return;
