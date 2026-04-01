@@ -1,41 +1,32 @@
 #!/bin/bash
 # 资产管理系统数据恢复脚本
 
-set -e
+BACKUP_DIR="$(dirname "$(dirname "$0")")/backups"
+DB_FILE="$(dirname "$(dirname "$0")")/assets.db"
 
-if [ $# -eq 0 ]; then
-    echo "用法: ./scripts/restore.sh <备份文件路径>"
-    echo "示例: ./scripts/restore.sh backups/backup_20260401_112345.db"
+echo "可用的备份文件："
+ls -lh "$BACKUP_DIR"/assets_backup_*.db 2>/dev/null || echo "未找到备份文件"
+
+if [ -z "$1" ]; then
+    echo "用法：$0 <备份文件名>"
+    echo "示例：$0 assets_backup_20260401_120000.db"
     exit 1
 fi
 
-BACKUP_FILE="$1"
+BACKUP_FILE="$BACKUP_DIR/$1"
 
 if [ ! -f "$BACKUP_FILE" ]; then
-    echo "❌ 错误: 备份文件不存在: $BACKUP_FILE"
+    echo "错误：备份文件不存在：$BACKUP_FILE"
     exit 1
 fi
 
-echo "⚠️  警告: 此操作将覆盖当前数据库!"
-echo "当前数据库: assets.db"
-echo "恢复自备份: $BACKUP_FILE"
-read -p "是否继续? (y/N): " -n 1 -r
-echo
-
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "❌ 操作已取消"
-    exit 1
+# 备份当前数据库
+if [ -f "$DB_FILE" ]; then
+    cp "$DB_FILE" "$DB_FILE.before_restore"
+    echo "已备份当前数据库为：assets.db.before_restore"
 fi
 
-# 创建当前数据库的备份
-DATE=$(date +%Y%m%d_%H%M%S)
-cp assets.db "assets.db.before_restore_$DATE"
-
-echo "💾 已创建恢复前备份: assets.db.before_restore_$DATE"
-
-# 执行恢复
-cp "$BACKUP_FILE" assets.db
-
-echo "✅ 数据恢复成功!"
-echo "新数据库: assets.db"
-echo "恢复前备份: assets.db.before_restore_$DATE"
+# 恢复数据
+cp "$BACKUP_FILE" "$DB_FILE"
+echo "数据已恢复自：$1"
+echo "恢复时间：$(date)"

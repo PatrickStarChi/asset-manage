@@ -1,29 +1,41 @@
-# 数据库文件（使用数据）
+# 依赖
+node_modules/
+
+# 数据库文件
 assets.db
-*.db.gz
-db/*.db
+*.db.backup
 
 # 日志文件
 logs/*.log
 *.log
 
+# 备份文件
+backups/*.db
+
 # 上传文件
 uploads/*
 !uploads/.gitkeep
-
-# 备份文件
-backups/*
-!backups/.gitkeep
-
-# 依赖
-node_modules/
-
-# 系统文件
-.DS_Store
-Thumbs.db
-.env
 
 # 临时文件
 tmp/
 temp/
 *.tmp
+*.swp
+*.swo
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 环境配置
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# 测试文件
+*.test.js
+*.spec.js
+coverage/

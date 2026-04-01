@@ -1,12 +1,14 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const { initDatabase } = require('./database');
 const QRCode = require('qrcode');
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const ExcelJS = require('exceljs');
+const { logOperation, getOperations, cleanupOldLogs, LogLevel } = require('./logger');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -1047,7 +1049,168 @@ app.get('/api/stats/low-stock-warning', authMiddleware, (req, res) => {
   });
 });
 
+// ============ 操作日志 API ============
+
+// 获取操作日志
+app.get('/api/logs', authMiddleware, (req, res) => {
+  const { limit = 100, action, user } = req.query;
+  const logs = getOperations(parseInt(limit), action || null, user || null);
+  res.json(logs);
+});
+
+// 获取日志操作类型统计
+app.get('/api/logs/actions', authMiddleware, (req, res) => {
+  const logs = getOperations(10000);
+  const actionCount = {};
+  logs.forEach(log => {
+    actionCount[log.action] = (actionCount[log.action] || 0) + 1;
+  });
+  res.json(actionCount);
+});
+
+// ============ 数据备份 API ============
+
+// 获取备份列表
+app.get('/api/backups', authMiddleware, (req, res) => {
+  const backupDir = path.join(__dirname, 'backups');
+  if (!fs.existsSync(backupDir)) {
+    return res.json([]);
+  }
+  
+  const files = fs.readdirSync(backupDir)
+    .filter(f => f.endsWith('.db'))
+    .map(f => {
+      const filePath = path.join(backupDir, f);
+      const stats = fs.statSync(filePath);
+      return {
+        filename: f,
+        size: stats.size,
+        createdAt: stats.birthtime.toISOString(),
+        modifiedAt: stats.mtime.toISOString()
+      };
+    })
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  
+  res.json(files);
+});
+
+// 创建备份
+app.post('/api/backups', authMiddleware, (req, res) => {
+  const dbPath = path.join(__dirname, 'assets.db');
+  const backupDir = path.join(__dirname, 'backups');
+  const date = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+  const backupFile = path.join(backupDir, `assets_backup_${date}.db`);
+  
+  if (!fs.existsSync(backupDir)) {
+    fs.mkdirSync(backupDir, { recursive: true });
+  }
+  
+  if (!fs.existsSync(dbPath)) {
+    return res.status(404).json({ error: '数据库文件不存在' });
+  }
+  
+  try {
+    fs.copyFileSync(dbPath, backupFile);
+    logOperation('BACKUP_CREATE', `创建备份：${backupFile}`, req.user.username);
+    res.json({ success: true, filename: path.basename(backupFile) });
+  } catch (err) {
+    res.status(500).json({ error: '备份失败：' + err.message });
+  }
+});
+
+// 恢复备份
+app.post('/api/backups/restore', authMiddleware, (req, res) => {
+  const { filename } = req.body;
+  if (!filename) {
+    return res.status(400).json({ error: '请指定备份文件名' });
+  }
+  
+  const backupDir = path.join(__dirname, 'backups');
+  const dbPath = path.join(__dirname, 'assets.db');
+  const backupPath = path.join(backupDir, filename);
+  
+  if (!fs.existsSync(backupPath)) {
+    return res.status(404).json({ error: '备份文件不存在' });
+  }
+  
+  try {
+    // 备份当前数据库
+    if (fs.existsSync(dbPath)) {
+      const currentBackup = path.join(backupDir, `current_backup_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}.db`);
+      fs.copyFileSync(dbPath, currentBackup);
+      logOperation('BACKUP_AUTO', `恢复前自动备份：${path.basename(currentBackup)}`, req.user.username);
+    }
+    
+    // 恢复备份
+    fs.copyFileSync(backupPath, dbPath);
+    logOperation('BACKUP_RESTORE', `从备份恢复：${filename}`, req.user.username);
+    
+    res.json({ success: true, message: '数据库恢复成功' });
+  } catch (err) {
+    res.status(500).json({ error: '恢复失败：' + err.message });
+  }
+});
+
+// 删除备份
+app.delete('/api/backups/:filename', authMiddleware, (req, res) => {
+  const { filename } = req.params;
+  const backupPath = path.join(__dirname, 'backups', filename);
+  
+  if (!fs.existsSync(backupPath)) {
+    return res.status(404).json({ error: '备份文件不存在' });
+  }
+  
+  try {
+    fs.unlinkSync(backupPath);
+    logOperation('BACKUP_DELETE', `删除备份：${filename}`, req.user.username);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: '删除失败：' + err.message });
+  }
+});
+
+// 清理旧日志
+app.post('/api/logs/cleanup', authMiddleware, (req, res) => {
+  const { days = 30 } = req.body;
+  cleanupOldLogs(parseInt(days));
+  logOperation('LOG_CLEANUP', `清理${days}天前的日志`, req.user.username);
+  res.json({ success: true });
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 资产管理系统运行在 http://localhost:${PORT}`);
+  console.log(`📝 操作日志目录：${path.join(__dirname, 'logs')}`);
+  console.log(`💾 备份目录：${path.join(__dirname, 'backups')}`);
+  
+  // 定时任务：每天凌晨 2 点备份
+  const cron = require('node-cron');
+  cron.schedule('0 2 * * *', () => {
+    const dbPath = path.join(__dirname, 'assets.db');
+    const backupDir = path.join(__dirname, 'backups');
+    const date = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const backupFile = path.join(backupDir, `auto_backup_${date}.db`);
+    
+    if (fs.existsSync(dbPath)) {
+      if (!fs.existsSync(backupDir)) {
+        fs.mkdirSync(backupDir, { recursive: true });
+      }
+      fs.copyFileSync(dbPath, backupFile);
+      console.log(`✅ 定时备份完成：${backupFile}`);
+      
+      // 清理 30 天前的备份
+      const oldBackups = fs.readdirSync(backupDir)
+        .filter(f => f.endsWith('.db'))
+        .map(f => ({ name: f, time: fs.statSync(path.join(backupDir, f)).mtime.getTime() }))
+        .filter(f => (Date.now() - f.time) > (30 * 24 * 60 * 60 * 1000));
+      
+      oldBackups.forEach(f => {
+        fs.unlinkSync(path.join(backupDir, f.name));
+        console.log(`🧹 清理旧备份：${f.name}`);
+      });
+      
+      // 清理旧日志
+      cleanupOldLogs(30);
+    }
+  });
 });
