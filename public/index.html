@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>资产管理系统</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <!-- 侧边栏 -->
+    <aside class="sidebar">
+      <div class="logo">
+        <h1>📦 资产管理</h1>
+      </div>
+      <nav class="nav-menu">
+        <a href="#" class="nav-item active" data-page="dashboard">
+          <span class="icon">📊</span>
+          <span>仪表盘</span>
+        </a>
+        <a href="#" class="nav-item" data-page="assets">
+          <span class="icon">📋</span>
+          <span>资产列表</span>
+        </a>
+        <a href="#" class="nav-item" data-page="transactions-in">
+          <span class="icon">📥</span>
+          <span>入库记录</span>
+        </a>
+        <a href="#" class="nav-item" data-page="transactions-out">
+          <span class="icon">📤</span>
+          <span>出库记录</span>
+        </a>
+        <a href="#" class="nav-item" data-page="scan">
+          <span class="icon">📷</span>
+          <span>扫码登记</span>
+        </a>
+        <a href="#" class="nav-item" data-page="users" id="nav-users" style="display: none;">
+          <span class="icon">👥</span>
+          <span>账号管理</span>
+        </a>
+      </nav>
+      <div class="user-info" id="user-info" style="display: none;">
+        <div class="user-avatar">👤</div>
+        <div class="user-details">
+          <div class="user-name" id="user-name"></div>
+          <div class="user-dept" id="user-dept"></div>
+        </div>
+        <button class="btn-logout" onclick="logout()">退出</button>
+      </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="main-content">
+      <!-- 仪表盘页面 -->
+      <section id="dashboard" class="page active">
+        <header class="page-header">
+          <h2>仪表盘</h2>
+        </header>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">📦</div>
+            <div class="stat-info">
+              <div class="stat-value" id="total-assets">0</div>
+              <div class="stat-label">总资产数量</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🏷️</div>
+            <div class="stat-info">
+              <div class="stat-value" id="category-count">0</div>
+              <div class="stat-label">资产种类</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📥</div>
+            <div class="stat-info">
+              <div class="stat-value" id="month-in">0</div>
+              <div class="stat-label">本月入库</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📤</div>
+            <div class="stat-info">
+              <div class="stat-value" id="month-out">0</div>
+              <div class="stat-label">本月出库</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dashboard-sections">
+          <div class="section">
+            <h3>📊 分类统计</h3>
+            <div id="category-stats" class="category-stats"></div>
+          </div>
+          <div class="section">
+            <h3>⚠️ 库存预警</h3>
+            <div id="low-stock-alert" class="low-stock-list"></div>
+          </div>
+          <div class="section">
+            <h3>📈 物品变化趋势</h3>
+            <div id="trends-chart" class="trends-chart"></div>
+          </div>
+          <div class="section">
+            <h3>🔥 消耗最快物品</h3>
+            <div id="fast-consumption" class="fast-consumption-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 资产列表页面 -->
+      <section id="assets" class="page">
+        <header class="page-header">
+          <h2>资产列表</h2>
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-primary" onclick="showModal('addAssetModal')">+ 新增资产</button>
+            <button class="btn btn-secondary" onclick="exportAssets()">📥 导出 Excel</button>
+            <button class="btn btn-secondary" onclick="showImportModal()">📤 批量入库</button>
+          </div>
+        </header>
+        <div class="filters">
+          <input type="text" id="search-input" class="search-input" placeholder="搜索资产名称或位置...">
+          <select id="category-filter" class="filter-select">
+            <option value="">全部分类</option>
+          </select>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th class="sortable" onclick="toggleSort('id')">ID <span class="sort-icon" id="sort-id-indicator">▼</span></th>
+                <th class="sortable" onclick="toggleSort('name')">名称 <span class="sort-icon" id="sort-name-indicator"></span></th>
+                <th class="sortable" onclick="toggleSort('category')">分类 <span class="sort-icon" id="sort-category-indicator"></span></th>
+                <th class="sortable" onclick="toggleSort('quantity')">数量 <span class="sort-icon" id="sort-quantity-indicator"></span></th>
+                <th>单位</th>
+                <th>位置</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="assets-table-body">
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 入库记录页面 -->
+      <section id="transactions-in" class="page">
+        <header class="page-header">
+          <h2>📥 入库记录</h2>
+        </header>
+        <div class="filters">
+          <input type="text" id="in-search-input" class="search-input" placeholder="搜索物品名称或 ID...">
+          <input type="date" id="in-date-start" class="filter-date" placeholder="开始日期">
+          <input type="date" id="in-date-end" class="filter-date" placeholder="结束日期">
+          <select id="in-asset-filter" class="filter-select">
+            <option value="">全部物品</option>
+          </select>
+          <button class="btn btn-secondary" onclick="loadInTransactions()">🔍 筛选</button>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>物品名称</th>
+                <th>入库数量</th>
+                <th>操作人</th>
+                <th>房间号</th>
+                <th>备注</th>
+                <th>时间</th>
+              </tr>
+            </thead>
+            <tbody id="transactions-in-body">
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 出库记录页面 -->
+      <section id="transactions-out" class="page">
+        <header class="page-header">
+          <h2>📤 出库记录</h2>
+        </header>
+        <div class="filters">
+          <input type="text" id="out-search-input" class="search-input" placeholder="搜索物品名称或 ID...">
+          <input type="date" id="out-date-start" class="filter-date" placeholder="开始日期">
+          <input type="date" id="out-date-end" class="filter-date" placeholder="结束日期">
+          <select id="out-asset-filter" class="filter-select">
+            <option value="">全部物品</option>
+          </select>
+          <button class="btn btn-secondary" onclick="loadOutTransactions()">🔍 筛选</button>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>物品名称</th>
+                <th>出库数量</th>
+                <th>领用人</th>
+                <th>房间号</th>
+                <th>备注</th>
+                <th>时间</th>
+              </tr>
+            </thead>
+            <tbody id="transactions-out-body">
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 扫码登记页面 -->
+      <section id="scan" class="page">
+        <header class="page-header">
+          <h2>扫码登记</h2>
+        </header>
+        <div class="scan-container">
+          <div class="scan-box">
+            <div class="scan-type-selector">
+              <button class="scan-type-btn active" data-type="out">出库</button>
+              <button class="scan-type-btn" data-type="in">入库</button>
+            </div>
+            <div class="scan-input-area">
+              <label>扫描二维码或手动输入资产 ID</label>
+              <input type="text" id="scan-input" class="scan-input" placeholder="扫描二维码或输入资产 ID">
+              <button class="btn btn-primary" onclick="handleScan()">确认</button>
+            </div>
+            <div id="scan-result" class="scan-result"></div>
+          </div>
+          <video id="qr-video" class="qr-video" autoplay playsinline></video>
+          <canvas id="qr-canvas" class="qr-canvas"></canvas>
+          <button class="btn btn-secondary" onclick="toggleCamera()">📷 打开摄像头</button>
+        </div>
+      </section>
+
+      <!-- 子页面：资产详情 -->
+      <section id="page-asset-detail" class="page sub-page">
+        <header class="page-header">
+          <button class="btn btn-secondary" onclick="navigateTo('assets')">← 返回列表</button>
+          <h2>📦 资产详情</h2>
+          <button class="btn btn-warning" onclick="toggleAssetEdit()" id="edit-toggle-btn">✏️ 编辑</button>
+        </header>
+        <div class="page-content">
+          <!-- 查看模式 -->
+          <div id="asset-view-mode">
+            <div class="asset-detail-grid">
+              <div class="asset-detail-item">
+                <label>ID</label>
+                <div class="value" id="detail-id">-</div>
+              </div>
+              <div class="asset-detail-item">
+                <label>名称</label>
+                <div class="value" id="detail-name">-</div>
+              </div>
+              <div class="asset-detail-item">
+                <label>分类</label>
+                <div class="value" id="detail-category">-</div>
+              </div>
+              <div class="asset-detail-item">
+                <label>数量</label>
+                <div class="value" id="detail-quantity">-</div>
+              </div>
+              <div class="asset-detail-item">
+                <label>单位</label>
+                <div class="value" id="detail-unit">-</div>
+              </div>
+              <div class="asset-detail-item">
+                <label>位置</label>
+                <div class="value" id="detail-location">-</div>
+              </div>
+              <div class="asset-detail-item">
+                <label>最低库存</label>
+                <div class="value" id="detail-min-stock" style="color:#e74c3c;">-</div>
+              </div>
+              <div class="asset-detail-item">
+                <label>可领用</label>
+                <div class="value" id="detail-available" style="color:#27ae60;">-</div>
+              </div>
+              <div class="asset-detail-item" style="grid-column: 1 / -1;">
+                <label>描述</label>
+                <div class="value" id="detail-description">-</div>
+              </div>
+            </div>
+            
+            <div class="asset-actions" style="margin-top:25px;display:flex;gap:10px;flex-wrap:wrap;">
+              <button class="btn btn-success" onclick="openStockIn(currentAssetId)">📥 入库</button>
+              <button class="btn btn-danger" onclick="openStockOut(currentAssetId)">📤 出库</button>
+              <button class="btn btn-secondary" onclick="openQRCode(currentAssetId)">📱 二维码</button>
+              <button class="btn btn-info" onclick="openTransactions(currentAssetId)">📋 出入库记录</button>
+            </div>
+            
+            <!-- 物品变化趋势 -->
+            <div class="section" style="margin-top:30px;">
+              <h3>📈 数量变化趋势</h3>
+              <div id="asset-trend-chart" class="trend-chart"></div>
+            </div>
+          </div>
+          
+          <!-- 编辑模式 -->
+          <div id="asset-edit-mode" style="display:none;">
+            <form id="edit-asset-form-inline" onsubmit="handleEditAssetInline(event)" style="max-width:600px;">
+              <input type="hidden" id="edit-asset-id-inline">
+              <div class="form-group">
+                <label>资产名称 *</label>
+                <input type="text" id="edit-asset-name-inline" required class="form-input">
+              </div>
+              <div class="form-group">
+                <label>分类 *</label>
+                <select id="edit-asset-category-inline" required class="form-select"></select>
+              </div>
+              <div class="form-group">
+                <label>数量</label>
+                <input type="number" id="edit-asset-quantity-inline" min="0" class="form-input">
+              </div>
+              <div class="form-group">
+                <label>单位</label>
+                <input type="text" id="edit-asset-unit-inline" class="form-input">
+              </div>
+              <div class="form-group">
+                <label>存放位置</label>
+                <input type="text" id="edit-asset-location-inline" class="form-input">
+              </div>
+              <div class="form-group">
+                <label>描述</label>
+                <textarea id="edit-asset-description-inline" class="form-textarea"></textarea>
+              </div>
+              <div class="form-group">
+                <label>最低库存</label>
+                <input type="number" id="edit-asset-min-stock-inline" min="0" class="form-input" value="5">
+                <small style="color:#7f8c8d;font-size:12px;">当库存≤此值时会在仪表盘警告</small>
+              </div>
+              <div style="margin-top:20px;display:flex;gap:10px;">
+                <button type="submit" class="btn btn-primary">💾 保存</button>
+                <button type="button" class="btn btn-secondary" onclick="toggleAssetEdit()">取消</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- 子页面：入库 -->
+      <section id="page-stock-in" class="page sub-page">
+        <header class="page-header">
+          <button class="btn btn-secondary" onclick="navigateTo('assets')">← 返回列表</button>
+          <h2>📥 入库</h2>
+        </header>
+        <div class="page-content">
+          <form id="stock-in-form" class="modal-form" onsubmit="handleStockIn(event)" style="max-width:600px;margin:0 auto;">
+            <input type="hidden" id="stock-in-asset-id">
+            <div class="form-group">
+              <label>物品名称</label>
+              <input type="text" id="stock-in-name" class="form-input" readonly>
+            </div>
+            <div class="form-group">
+              <label>当前库存</label>
+              <input type="text" id="stock-in-current" class="form-input" readonly>
+            </div>
+            <div class="form-group">
+              <label>入库数量 *</label>
+              <input type="number" name="quantity" required min="1" class="form-input">
+            </div>
+            <div class="form-group">
+              <label>备注</label>
+              <textarea name="remark" class="form-textarea"></textarea>
+            </div>
+            <div style="margin-top:20px;display:flex;gap:10px;">
+              <button type="submit" class="btn btn-success">✅ 确认入库</button>
+              <button type="button" class="btn btn-secondary" onclick="navigateTo('assets')">取消</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- 子页面：出库 -->
+      <section id="page-stock-out" class="page sub-page">
+        <header class="page-header">
+          <button class="btn btn-secondary" onclick="navigateTo('assets')">← 返回列表</button>
+          <h2>📤 出库</h2>
+        </header>
+        <div class="page-content">
+          <form id="stock-out-form" class="modal-form" onsubmit="handleStockOut(event)" style="max-width:600px;margin:0 auto;">
+            <input type="hidden" id="stock-out-asset-id">
+            <div class="form-group">
+              <label>物品名称</label>
+              <input type="text" id="stock-out-name" class="form-input" readonly>
+            </div>
+            <div class="form-group">
+              <label>当前库存</label>
+              <input type="text" id="stock-out-current" class="form-input" readonly>
+            </div>
+            <div class="form-group">
+              <label>可领用数量</label>
+              <input type="text" id="stock-out-available" class="form-input" readonly style="color:#27ae60;font-weight:600;">
+            </div>
+            <div class="form-group">
+              <label>出库数量 *</label>
+              <input type="number" name="quantity" required min="1" class="form-input" id="stock-out-quantity">
+            </div>
+            <div class="form-group">
+              <label>房间号</label>
+              <input type="text" name="location" class="form-input" placeholder="例如：301、A202">
+            </div>
+            <div class="form-group">
+              <label>备注</label>
+              <textarea name="remark" class="form-textarea"></textarea>
+            </div>
+            <div style="margin-top:20px;display:flex;gap:10px;">
+              <button type="submit" class="btn btn-danger">✅ 确认出库</button>
+              <button type="button" class="btn btn-secondary" onclick="navigateTo('assets')">取消</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- 子页面：二维码 -->
+      <section id="page-qrcode" class="page sub-page">
+        <header class="page-header">
+          <button class="btn btn-secondary" onclick="navigateTo('assets')">← 返回列表</button>
+          <h2>📱 二维码</h2>
+        </header>
+        <div id="qrcode-content" class="page-content" style="text-align:center;"></div>
+      </section>
+
+      <!-- 子页面：出入库记录 -->
+      <section id="page-transactions" class="page sub-page">
+        <header class="page-header">
+          <button class="btn btn-secondary" onclick="navigateTo('assets')">← 返回列表</button>
+          <h2>📋 出入库记录</h2>
+        </header>
+        <div id="transactions-content" class="page-content"></div>
+      </section>
+
+      <!-- 账号管理页面 -->
+      <section id="users" class="page">
+        <header class="page-header">
+          <h2>👥 账号管理</h2>
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-primary" onclick="showAddUserModal()">+ 新增用户</button>
+            <button class="btn btn-secondary" onclick="showChangePasswordModal()">🔑 修改密码</button>
+          </div>
+        </header>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>用户名</th>
+                <th>角色</th>
+                <th>创建时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="users-table-body">
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 新增资产模态框 -->
+  <div id="addAssetModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>新增资产</h3>
+        <button class="modal-close" onclick="closeModal('addAssetModal')">&times;</button>
+      </div>
+      <form id="add-asset-form" class="modal-form">
+        <div class="form-group">
+          <label>资产名称 *</label>
+          <input type="text" name="name" required class="form-input">
+        </div>
+        <div class="form-group">
+          <label>分类 *</label>
+          <select name="category" required class="form-select">
+          </select>
+        </div>
+        <div class="form-group">
+          <label>数量</label>
+          <input type="number" name="quantity" value="0" min="0" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>单位</label>
+          <input type="text" name="unit" value="个" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>存放位置</label>
+          <input type="text" name="location" class="form-input">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('addAssetModal')">取消</button>
+          <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 编辑资产模态框 -->
+  <div id="editAssetModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>编辑资产</h3>
+        <button class="modal-close" onclick="closeModal('editAssetModal')">&times;</button>
+      </div>
+      <form id="edit-asset-form" class="modal-form" onsubmit="handleEditAsset(event)">
+        <input type="hidden" id="edit-asset-id">
+        <div class="form-group">
+          <label>资产名称 *</label>
+          <input type="text" id="edit-asset-name" required class="form-input">
+        </div>
+        <div class="form-group">
+          <label>分类 *</label>
+          <select id="edit-asset-category" required class="form-select">
+          </select>
+        </div>
+        <div class="form-group">
+          <label>数量</label>
+          <input type="number" id="edit-asset-quantity" min="0" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>单位</label>
+          <input type="text" id="edit-asset-unit" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>存放位置</label>
+          <input type="text" id="edit-asset-location" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>描述</label>
+          <textarea id="edit-asset-description" class="form-textarea" placeholder="物品描述、备注等"></textarea>
+        </div>
+        <div class="form-group">
+          <label>最低库存</label>
+          <input type="number" id="edit-asset-min-stock" min="0" class="form-input" value="5" placeholder="默认 5">
+          <small style="color:#7f8c8d;font-size:12px;">当库存≤此值时会在仪表盘警告</small>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('editAssetModal')">取消</button>
+          <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 资产详情模态框 -->
+  <div id="assetDetailModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>资产详情</h3>
+        <button class="modal-close" onclick="closeModal('assetDetailModal')">&times;</button>
+      </div>
+      <div id="asset-detail-content" class="modal-body">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('assetDetailModal')">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 出入库模态框 -->
+  <div id="transactionModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="transaction-modal-title">入库</h3>
+        <button class="modal-close" onclick="closeModal('transactionModal')">&times;</button>
+      </div>
+      <form id="transaction-form" class="modal-form">
+        <input type="hidden" name="asset_id" id="trans-asset-id">
+        <div class="form-group">
+          <label>资产名称</label>
+          <input type="text" id="trans-asset-name" class="form-input" readonly>
+        </div>
+        <div class="form-group">
+          <label>当前库存</label>
+          <input type="text" id="trans-current-stock" class="form-input" readonly>
+        </div>
+        <div class="form-group">
+          <label>数量 *</label>
+          <input type="number" name="quantity" required min="1" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>操作人</label>
+          <input type="text" name="operator" value="管理员" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>备注</label>
+          <textarea name="remark" class="form-input form-textarea"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('transactionModal')">取消</button>
+          <button type="submit" class="btn btn-primary">确认</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 新增用户模态框 -->
+  <div id="addUserModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>新增用户</h3>
+        <button class="modal-close" onclick="closeModal('addUserModal')">&times;</button>
+      </div>
+      <form id="add-user-form" class="modal-form" onsubmit="handleAddUser(event)">
+        <div class="form-group">
+          <label>用户名 *</label>
+          <input type="text" name="username" required class="form-input" placeholder="请输入用户名">
+        </div>
+        <div class="form-group">
+          <label>密码 *</label>
+          <input type="password" name="password" required class="form-input" placeholder="请输入密码">
+        </div>
+        <div class="form-group">
+          <label>角色</label>
+          <select name="role" class="form-select">
+            <option value="user">普通用户</option>
+            <option value="admin">管理员</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>部门</label>
+          <input type="text" name="department" class="form-input" placeholder="请输入部门">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('addUserModal')">取消</button>
+          <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 修改密码模态框 -->
+  <div id="changePasswordModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>🔑 修改密码</h3>
+        <button class="modal-close" onclick="closeModal('changePasswordModal')">&times;</button>
+      </div>
+      <form id="change-password-form" class="modal-form" onsubmit="handleChangePassword(event)">
+        <div class="form-group">
+          <label>旧密码 *</label>
+          <input type="password" id="old-password" required class="form-input" placeholder="请输入旧密码">
+        </div>
+        <div class="form-group">
+          <label>新密码 *</label>
+          <input type="password" id="new-password" required class="form-input" placeholder="请输入新密码" minlength="6">
+        </div>
+        <div class="form-group">
+          <label>确认新密码 *</label>
+          <input type="password" id="confirm-password" required class="form-input" placeholder="请再次输入新密码">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('changePasswordModal')">取消</button>
+          <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 重置密码模态框 -->
+  <div id="resetPasswordModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>🔑 重置密码</h3>
+        <button class="modal-close" onclick="closeModal('resetPasswordModal')">&times;</button>
+      </div>
+      <form id="reset-password-form" class="modal-form" onsubmit="handleResetPassword(event)">
+        <input type="hidden" id="reset-user-id">
+        <div class="form-group">
+          <label>用户名</label>
+          <input type="text" id="reset-username" class="form-input" readonly disabled>
+        </div>
+        <div class="form-group">
+          <label>新密码 *</label>
+          <input type="password" id="reset-new-password" required class="form-input" placeholder="请输入新密码" minlength="6">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('resetPasswordModal')">取消</button>
+          <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 批量入库模态框 -->
+  <div id="importStockModal" class="modal">
+    <div class="modal-content" style="max-width:500px;">
+      <div class="modal-header">
+        <h3>📤 Excel 批量入库</h3>
+        <button class="modal-close" onclick="closeModal('importStockModal')">&times;</button>
+      </div>
+      <div style="padding:25px;">
+        <div style="background:#f8f9fa;padding:20px;border-radius:8px;margin-bottom:20px;border-left:4px solid #3498db;">
+          <h4 style="margin-bottom:12px;color:#2c3e50;">📋 使用说明</h4>
+          <ol style="margin-left:20px;color:#555;font-size:14px;line-height:1.8;">
+            <li>下载入库模板 Excel 文件</li>
+            <li>填写物品名称、入库数量、备注</li>
+            <li>上传填写好的 Excel 文件</li>
+            <li>系统将自动更新对应物品的库存</li>
+          </ol>
+        </div>
+        <div style="margin-bottom:20px;">
+          <button class="btn btn-primary" onclick="downloadImportTemplate()" style="width:100%;padding:14px;margin-bottom:15px;">📥 下载入库模板</button>
+          <label style="display:block;width:100%;">
+            <span style="display:block;margin-bottom:8px;color:#2c3e50;font-weight:500;">选择 Excel 文件</span>
+            <input type="file" id="import-file" accept=".xlsx,.xls" style="width:100%;padding:12px;border:2px dashed #dce0e0;border-radius:6px;font-size:14px;cursor:pointer;background:#f8f9fa;" />
+          </label>
+        </div>
+        <div id="import-result" style="margin-top:15px;max-height:200px;overflow-y:auto;"></div>
+        <div style="margin-top:20px;display:flex;gap:10px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('importStockModal')" style="flex:1;padding:12px;">关闭</button>
+          <button type="button" class="btn btn-success" onclick="processImport()" style="flex:1;padding:12px;">📤 开始导入</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=202604011130"
+</body>
+</html>

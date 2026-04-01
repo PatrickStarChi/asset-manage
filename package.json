@@ -1,0 +1,26 @@
+{
+  "name": "asset-management-system",
+  "version": "1.0.0",
+  "description": "办公用品资产管理系统",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "init-db": "node db/init.js",
+    "dev": "node app.js",
+    "backup": "./scripts/backup.sh"
+  },
+  "keywords": [
+    "asset",
+    "management",
+    "inventory"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "sql.js": "^1.8.0",
+    "qrcode": "^1.5.3",
+    "multer": "^1.4.5-lts.1",
+    "uuid": "^9.0.0"
+  }
+}

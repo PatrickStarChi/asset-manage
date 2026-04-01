@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>资产领用登记</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    h1 { 
+      color: #2c3e50; 
+      margin-bottom: 10px;
+      text-align: center;
+      font-size: 24px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #7f8c8d;
+      margin-bottom: 25px;
+      font-size: 14px;
+    }
+    .asset-info {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 25px;
+    }
+    .asset-info h2 {
+      font-size: 20px;
+      margin-bottom: 15px;
+    }
+    .asset-info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .asset-info-item label {
+      font-size: 11px;
+      opacity: 0.8;
+      display: block;
+      margin-bottom: 3px;
+    }
+    .asset-info-item .value {
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #2c3e50;
+      font-weight: 500;
+      font-size: 14px;
+    }
+    .form-group label .required {
+      color: #e74c3c;
+    }
+    .form-input, .form-select, .form-textarea {
+      width: 100%;
+      padding: 12px 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 15px;
+      transition: border-color 0.3s;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    .form-textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+    .btn:active {
+      transform: translateY(0);
+    }
+    .btn-secondary {
+      background: #95a5a6;
+      margin-top: 10px;
+    }
+    .loading { text-align: center; padding: 40px; color: #7f8c8d; }
+    .error { 
+      background: #fee; 
+      color: #e74c3c; 
+      padding: 20px; 
+      border-radius: 8px; 
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .success {
+      background: #efe;
+      color: #27ae60;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .qr-hint {
+      text-align: center;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      color: #7f8c8d;
+    }
+    .stock-warning {
+      background: #fff3cd;
+      color: #856404;
+      padding: 10px 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📦 资产领用登记</h1>
+    <p class="subtitle">扫描二维码自动识别物品</p>
+    
+    <div id="content">
+      <div class="loading">加载中...</div>
+    </div>
+  </div>
+
+  <script>
+    let currentAsset = null;
+    
+    async function loadAsset() {
+      const pathParts = window.location.pathname.split('/');
+      const assetId = pathParts[pathParts.length - 1];
+      
+      try {
+        const [assetRes, qrRes] = await Promise.all([
+          fetch(`/api/asset/${assetId}`),
+          fetch(`/api/assets/${assetId}/qrcode`)
+        ]);
+        
+        if (!assetRes.ok) throw new Error('资产不存在');
+        
+        currentAsset = await assetRes.json();
+        const qrData = await qrRes.json();
+        
+        const minStock = currentAsset.min_stock || 5;
+        const availableStock = Math.max(0, currentAsset.quantity - minStock);
+        
+        const stockWarning = currentAsset.quantity <= minStock
+          ? `<div class="stock-warning">⚠️ 当前库存已达最低库存 (${minStock})，不可领用</div>`
+          : availableStock < 10
+          ? `<div class="stock-warning">⚠️ 可领用数量较少，仅剩 ${availableStock} ${currentAsset.unit}（保留 ${minStock} ${currentAsset.unit} 最低库存）</div>`
+          : '';
+        
+        document.getElementById('content').innerHTML = `
+          ${stockWarning}
+          <div class="asset-info">
+            <h2>${currentAsset.name}</h2>
+            <div class="asset-info-grid">
+              <div class="asset-info-item">
+                <label>分类</label>
+                <div class="value">${currentAsset.category}</div>
+              </div>
+              <div class="asset-info-item">
+                <label>总库存</label>
+                <div class="value">${currentAsset.quantity} ${currentAsset.unit}</div>
+              </div>
+              <div class="asset-info-item">
+                <label>可领用</label>
+                <div class="value" style="color:#27ae60;">${availableStock} ${currentAsset.unit}</div>
+              </div>
+              <div class="asset-info-item">
+                <label>最低库存</label>
+                <div class="value" style="color:#e74c3c;">${minStock} ${currentAsset.unit}</div>
+              </div>
+              <div class="asset-info-item">
+                <label>存放位置</label>
+                <div class="value">${currentAsset.location || '未指定'}</div>
+              </div>
+              <div class="asset-info-item">
+                <label>资产 ID</label>
+                <div class="value">#${currentAsset.id}</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="qr-hint">
+            📱 扫码自动识别物品，填写下方表单完成领用登记
+          </div>
+          
+          <form id="checkout-form" onsubmit="handleCheckout(event)">
+            <input type="hidden" id="asset-id" value="${currentAsset.id}">
+            <input type="hidden" id="asset-name" value="${currentAsset.name}">
+            
+            <div class="form-group">
+              <label>领用数量（${currentAsset.unit}）<span class="required">*</span></label>
+              <input type="number" name="quantity" required min="1" max="${availableStock}" 
+                     value="1" class="form-input" id="quantity-input">
+              <small style="color: #7f8c8d; font-size: 12px;">最大可领用：${availableStock} ${currentAsset.unit}（保留 ${minStock} ${currentAsset.unit} 最低库存）</small>
+            </div>
+            
+            <div class="form-group">
+              <label>房间号</label>
+              <input type="text" name="location" class="form-input" placeholder="例如：301、A202">
+            </div>
+            
+            <div class="form-group">
+              <label>备注</label>
+              <textarea name="remark" class="form-textarea" placeholder="选填"></textarea>
+            </div>
+            
+            <button type="submit" class="btn">✅ 确认领用</button>
+            <a href="/" class="btn btn-secondary" style="text-align:center;text-decoration:none;">← 返回首页</a>
+          </form>
+        `;
+      } catch (err) {
+        document.getElementById('content').innerHTML = `
+          <div class="error">
+            <h3>❌ 加载失败</h3>
+            <p>${err.message}</p>
+            <a href="/" class="btn" style="display:inline-block;margin-top:15px;text-decoration:none;">← 返回首页</a>
+          </div>
+        `;
+      }
+    }
+    
+    async function handleCheckout(e) {
+      e.preventDefault();
+      const form = e.target;
+      const submitBtn = form.querySelector('.btn[type="submit"]');
+      const originalText = submitBtn.textContent;
+      
+      submitBtn.disabled = true;
+      submitBtn.textContent = '处理中...';
+      
+      const data = {
+        asset_id: parseInt(document.getElementById('asset-id').value),
+        asset_name: document.getElementById('asset-name').value,
+        quantity: parseInt(form.quantity.value),
+        operator: form.operator.value,
+        location: form.location.value,
+        remark: form.remark.value || '领用'
+      };
+      
+      try {
+        const res = await fetch('/api/transactions/out', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await res.json();
+        
+        if (res.ok && result.success) {
+          document.getElementById('content').innerHTML = `
+            <div class="success">
+              <h3>✅ 领用成功！</h3>
+              <p style="margin: 15px 0;">物品：<strong>${data.asset_name}</strong></p>
+              <p>领用人：<strong>${data.operator}</strong></p>
+              <p>房间号：<strong>${data.location}</strong></p>
+              <p>数量：<strong>${data.quantity}</strong></p>
+              <p style="margin-top: 15px; font-size: 13px; color: #7f8c8d;">
+                ${new Date().toLocaleString('zh-CN')}
+              </p>
+            </div>
+            <a href="/" class="btn">返回首页</a>
+            <a href="/asset/${data.asset_id}" class="btn btn-secondary" style="display:block;text-align:center;text-decoration:none;">继续领用</a>
+          `;
+        } else {
+          throw new Error(result.error || '领用失败');
+        }
+      } catch (err) {
+        document.getElementById('content').innerHTML = `
+          <div class="error">
+            <h3>❌ 领用失败</h3>
+            <p>${err.message}</p>
+            <button onclick="location.reload()" class="btn" style="margin-top:15px;">重试</button>
+            <a href="/" class="btn btn-secondary" style="display:block;text-align:center;text-decoration:none;margin-top:10px;">返回首页</a>
+          </div>
+        `;
+      }
+    }
+    
+    loadAsset();
+  </script>
+</body>
+</html>
