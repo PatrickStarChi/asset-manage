@@ -207,27 +207,43 @@ async function checkAuth() {
   const token = localStorage.getItem('token');
   const userStr = localStorage.getItem('user');
   
-  if (!token) {
-    window.location.href = '/login.html';
-    return;
+  if (token && userStr) {
+    try {
+      currentUser = JSON.parse(userStr);
+      
+      // 验证 token 是否有效
+      const res = await fetch('/api/auth/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (res.ok) {
+        const userData = await res.json();
+        currentUser = userData;
+        showUserInfo(currentUser);
+        console.log('✅ 登录状态有效');
+        return;
+      }
+    } catch (err) {
+      console.error('验证 token 失败:', err);
+    }
   }
   
-  try {
-    const res = await fetch('/api/auth/me', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    
-    if (!res.ok) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login.html';
-      return;
-    }
-    
-    currentUser = await res.json();
-    showUserInfo(currentUser);
-  } catch (err) {
-    console.error('检查登录状态失败:', err);
+  // 未登录，跳转到登录页面或显示登录框
+  console.log('⚠️ 未登录，请登录后查看');
+  // 如果当前不在登录页面，显示登录提示
+  if (!window.location.pathname.includes('login')) {
+    showLoginModal();
+  }
+}
+
+// 显示登录模态框
+function showLoginModal() {
+  const loginModal = document.getElementById('login-modal');
+  if (loginModal) {
+    loginModal.style.display = 'flex';
+  } else {
+    // 如果没有登录模态框，跳转到登录页面
+    window.location.href = '/login.html';
   }
 }
 
@@ -252,9 +268,10 @@ function showUserInfo(user) {
 
 // 退出登录
 function logout() {
+  // 简化版 - 返回首页
   localStorage.removeItem('token');
   localStorage.removeItem('user');
-  window.location.href = '/login.html';
+  window.location.href = '/';
 }
 
 // 加载用户列表
@@ -371,17 +388,34 @@ async function deleteUser(id, username) {
 
 // 初始化导航
 function initNavigation() {
-  const navItems = document.querySelectorAll('.nav-item');
+  const navItems = document.querySelectorAll(".nav-item");
   navItems.forEach(item => {
-    item.addEventListener('click', (e) => {
+    item.addEventListener("click", (e) => {
       e.preventDefault();
       const page = item.dataset.page;
+      
+      if (page === "backups") {
+        showBackupsPage();
+        return;
+      }
+      if (page === "logs") {
+        showLogsPage();
+        return;
+      }
+      
       navigateTo(page);
     });
   });
   
-  // 初始化显示仪表盘
-  navigateTo('dashboard');
+  // 检查管理员权限，显示管理菜单
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  if (user && user.role === "admin") {
+    document.getElementById("nav-backups").style.display = "flex";
+    document.getElementById("nav-logs").style.display = "flex";
+    document.getElementById("nav-users").style.display = "flex";
+  }
+  
+  navigateTo("dashboard");
 }
 
 // 全局排序状态
@@ -1563,13 +1597,16 @@ async function processImport() {
     worksheet.eachRow((row, rowNumber) => {
       if (rowNumber === 1 || rowNumber > worksheet.rowCount - 1) return; // 跳过表头和说明行
       
-      const quantity = row.getCell(7).value; // 第 7 列：入库数量（添加了位置列后）
+      const quantity = row.getCell(4).value; // 第 4 列：入库数量
       if (quantity && quantity > 0) {
         items.push({
-          id: row.getCell(1).value,
+          id: row.getCell(1).value || null,
           name: row.getCell(2).value,
+          category: row.getCell(3).value || '其他',
           quantity: quantity,
-          remark: row.getCell(8).value || '' // 第 8 列：备注
+          unit: row.getCell(5).value || '个',
+          location: row.getCell(6).value || '',
+          remark: row.getCell(7).value || ''
         });
       }
     });
@@ -1593,10 +1630,14 @@ async function processImport() {
     
     const successCount = data.results.filter(r => r.status === 'success').length;
     const errorCount = data.results.filter(r => r.status === 'error').length;
+    const createCount = data.results.filter(r => r.type === 'create').length;
+    const updateCount = data.results.filter(r => r.type === 'update').length;
     
     let html = `
       <div style="margin-top:10px;">
         <p style="color:#27ae60;font-weight:600;">✅ 成功：${successCount} 项</p>
+        ${createCount > 0 ? `<p style="color:#3498db;font-weight:600;">🆕 新品：${createCount} 项</p>` : ''}
+        ${updateCount > 0 ? `<p style="color:#2ecc71;font-weight:600;">📈 更新：${updateCount} 项</p>` : ''}
         ${errorCount > 0 ? `<p style="color:#e74c3c;font-weight:600;">❌ 失败：${errorCount} 项</p>` : ''}
       </div>
       <div style="margin-top:10px;max-height:300px;overflow-y:auto;">
@@ -1604,7 +1645,11 @@ async function processImport() {
     
     data.results.forEach(r => {
       if (r.status === 'success') {
-        html += `<div style="color:#27ae60;font-size:13px;padding:5px 0;">✅ ${r.name}: ${r.oldQuantity} → ${r.newQuantity} (+${r.quantity})</div>`;
+        if (r.type === 'create') {
+          html += `<div style="color:#3498db;font-size:13px;padding:5px 0;">🆕 ${r.name}: 创建新品，入库 ${r.newQuantity} ${r.unit||'个'} (分类：${r.category||'其他'})</div>`;
+        } else {
+          html += `<div style="color:#27ae60;font-size:13px;padding:5px 0;">✅ ${r.name}: ${r.oldQuantity} → ${r.newQuantity} (+${r.quantity})</div>`;
+        }
       } else {
         html += `<div style="color:#e74c3c;font-size:13px;padding:5px 0;">❌ ${r.name || r.id}: ${r.message}</div>`;
       }
@@ -1792,4 +1837,160 @@ function getCategoryColor(category) {
     '其他': '#95a5a6'
   };
   return colors[category] || '#3498db';
+}
+
+// 备份管理页面导航
+function showBackupsPage() {
+  document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+  document.getElementById('nav-backups').classList.add('active');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('backups').classList.add('active');
+  loadBackups();
+}
+
+// 加载备份列表
+async function loadBackups() {
+  const token = localStorage.getItem('token');
+  try {
+    const res = await fetch('/api/backups', {
+      headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+    });
+    const backups = await res.json();
+    
+    const tbody = document.getElementById('backups-table-body');
+    if (backups.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty-state">暂无备份</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = backups.map(b => {
+      const size = (b.size / 1024).toFixed(1) + ' KB';
+      const date = new Date(b.createdAt).toLocaleString('zh-CN');
+      return '<tr>' +
+        '<td>' + b.filename + '</td>' +
+        '<td>' + size + '</td>' +
+        '<td>' + date + '</td>' +
+        '<td>' +
+        '<button class="btn btn-small btn-primary" onclick="restoreBackup(\'' + b.filename + '\')">恢复</button> ' +
+        '<button class="btn btn-small btn-danger" onclick="deleteBackup(\'' + b.filename + '\')">删除</button>' +
+        '</td></tr>';
+    }).join('');
+  } catch (err) {
+    console.error('加载备份列表失败:', err);
+  }
+}
+
+// 创建备份
+async function createBackup() {
+  const token = localStorage.getItem('token');
+  try {
+    const res = await fetch('/api/backups', {
+      method: 'POST',
+      headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+    });
+    const result = await res.json();
+    if (result.success) {
+      alert('✅ 备份创建成功：' + result.filename);
+      loadBackups();
+    } else {
+      alert('❌ 备份失败：' + (result.error || '未知错误'));
+    }
+  } catch (err) {
+    console.error('创建备份失败:', err);
+    alert('❌ 创建备份失败：' + err.message);
+  }
+}
+
+// 恢复备份
+async function restoreBackup(filename) {
+  if (!confirm('确定要恢复到备份 "' + filename + '" 吗？\n当前数据将被覆盖！')) {
+    return;
+  }
+  
+  const token = localStorage.getItem('token');
+  try {
+    const res = await fetch('/api/backups/restore', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ filename: filename })
+    });
+    const result = await res.json();
+    if (result.success) {
+      alert('✅ 数据已恢复！请刷新页面。');
+      location.reload();
+    } else {
+      alert('❌ 恢复失败：' + (result.error || '未知错误'));
+    }
+  } catch (err) {
+    console.error('恢复备份失败:', err);
+    alert('❌ 恢复失败：' + err.message);
+  }
+}
+
+// 删除备份
+async function deleteBackup(filename) {
+  if (!confirm('确定要删除备份 "' + filename + '" 吗？')) {
+    return;
+  }
+  
+  const token = localStorage.getItem('token');
+  try {
+    const res = await fetch('/api/backups/' + encodeURIComponent(filename), {
+      method: 'DELETE',
+      headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+    });
+    const result = await res.json();
+    if (result.success) {
+      alert('✅ 备份已删除');
+      loadBackups();
+    } else {
+      alert('❌ 删除失败：' + (result.error || '未知错误'));
+    }
+  } catch (err) {
+    console.error('删除备份失败:', err);
+    alert('❌ 删除失败：' + err.message);
+  }
+}
+
+// 操作日志页面导航
+function showLogsPage() {
+  document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+  document.getElementById('nav-logs').classList.add('active');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('logs').classList.add('active');
+  loadLogs();
+}
+
+// 加载操作日志
+async function loadLogs() {
+  const token = localStorage.getItem('token');
+  try {
+    const res = await fetch('/api/logs?limit=100', {
+      headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+    });
+    const logs = await res.json();
+    
+    const tbody = document.getElementById('logs-table-body');
+    if (logs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">暂无日志</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = logs.map(log => {
+      const time = new Date(log.timestamp).toLocaleString('zh-CN');
+      const levelClass = log.level === 'ERROR' ? 'badge-danger' : (log.level === 'WARN' ? 'badge-warning' : 'badge-info');
+      return '<tr>' +
+        '<td>' + time + '</td>' +
+        '<td><span class="badge ' + levelClass + '">' + log.level + '</span></td>' +
+        '<td>' + (log.action || '-') + '</td>' +
+        '<td style="max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (log.details || '-') + '</td>' +
+        '<td>' + (log.user || '-') + '</td>' +
+        '</tr>';
+    }).join('');
+  } catch (err) {
+    console.error('加载日志失败:', err);
+  }
 }

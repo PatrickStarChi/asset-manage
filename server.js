@@ -805,9 +805,9 @@ app.get('/api/export/import-template', authMiddleware, async (req, res) => {
   }
 });
 
-// Excel 批量入库（按名称）
+// Excel 批量入库（按名称，支持自动创建新资产）
 app.post('/api/import/stock', authMiddleware, async (req, res) => {
-  const { items } = req.body; // [{name, quantity, remark}]
+  const { items, autoCreate = true } = req.body; // [{name, quantity, category, unit, location, remark}]
   
   if (!items || !Array.isArray(items)) {
     res.status(400).json({ error: '数据格式错误' });
@@ -818,15 +818,56 @@ app.post('/api/import/stock', authMiddleware, async (req, res) => {
   
   for (const item of items) {
     try {
-      const asset = await new Promise((resolve, reject) => {
+      let asset = await new Promise((resolve, reject) => {
         db.get('SELECT * FROM assets WHERE name = ?', [item.name], (err, row) => {
           if (err) reject(err);
           else resolve(row);
         });
       });
       
+      // 如果资产不存在且允许自动创建
+      if (!asset && autoCreate) {
+        const qrCode = require('uuid').v4();
+        const category = item.category || '其他';
+        const unit = item.unit || '个';
+        const location = item.location || '';
+        
+        await new Promise((resolveCreate, rejectCreate) => {
+          db.run(
+            'INSERT INTO assets (name, category, quantity, unit, location, qr_code) VALUES (?, ?, ?, ?, ?, ?)',
+            [item.name, category, parseInt(item.quantity) || 0, unit, location, qrCode],
+            function(err) {
+              if (err) rejectCreate(err);
+              else {
+                const newId = this.lastID;
+                db.get('SELECT * FROM assets WHERE id = ?', [newId], (err, row) => {
+                  if (err) rejectCreate(err);
+                  else resolveCreate(row);
+                });
+              }
+            }
+          );
+        });
+        
+        asset = await new Promise((resolve, reject) => {
+          db.get('SELECT * FROM assets WHERE name = ?', [item.name], (err, row) => {
+            if (err) reject(err);
+            else resolve(row);
+          });
+        });
+        
+        results.push({ 
+          name: item.name, 
+          status: 'created', 
+          message: '自动创建新资产',
+          id: asset.id,
+          newQuantity: asset.quantity 
+        });
+        continue;
+      }
+      
       if (!asset) {
-        results.push({ name: item.name, status: 'error', message: '物品不存在' });
+        results.push({ name: item.name, status: 'error', message: '物品不存在且未开启自动创建' });
         continue;
       }
       

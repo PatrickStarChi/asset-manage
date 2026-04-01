@@ -36,6 +36,14 @@
           <span class="icon">📷</span>
           <span>扫码登记</span>
         </a>
+        <a href="#" class="nav-item" data-page="backups" id="nav-backups" style="display: none;">
+          <span class="icon">💾</span>
+          <span>备份管理</span>
+        </a>
+        <a href="#" class="nav-item" data-page="logs" id="nav-logs" style="display: none;">
+          <span class="icon">📝</span>
+          <span>操作日志</span>
+        </a>
         <a href="#" class="nav-item" data-page="users" id="nav-users" style="display: none;">
           <span class="icon">👥</span>
           <span>账号管理</span>
@@ -452,6 +460,51 @@
               </tr>
             </thead>
             <tbody id="users-table-body">
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 备份管理页面 -->
+      <section id="backups" class="page">
+        <header class="page-header">
+          <h2>💾 备份管理</h2>
+          <button class="btn btn-primary" onclick="createBackup()">💾 立即备份</button>
+        </header>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>文件名</th>
+                <th>大小</th>
+                <th>创建时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="backups-table-body">
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 操作日志页面 -->
+      <section id="logs" class="page">
+        <header class="page-header">
+          <h2>📝 操作日志</h2>
+          <button class="btn btn-secondary" onclick="loadLogs()">🔄 刷新</button>
+        </header>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>时间</th>
+                <th>级别</th>
+                <th>操作</th>
+                <th>详情</th>
+                <th>用户</th>
+              </tr>
+            </thead>
+            <tbody id="logs-table-body">
             </tbody>
           </table>
         </div>

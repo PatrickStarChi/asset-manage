@@ -2,7 +2,7 @@
 # 资产管理系统数据备份脚本
 
 BACKUP_DIR="$(dirname "$(dirname "$0")")/backups"
-DB_FILE="$(dirname "$(dirname "$0")")/assets.db"
+DB_FILE="$(dirname "$(dirname "$0")")/db/assets.db"
 DATE=$(date +%Y%m%d_%H%M%S)
 
 # 创建备份

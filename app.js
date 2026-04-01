@@ -397,6 +397,81 @@ app.get('/api/logs', (req, res) => {
   }
 });
 
+// ==================== Excel 导入 API ====================
+
+app.post('/api/import/stock-by-id', (req, res) => {
+  const { items } = req.body;
+  
+  if (!items || !Array.isArray(items)) {
+    return res.status(400).json({ error: '无效的数据格式' });
+  }
+  
+  const results = [];
+  
+  items.forEach(item => {
+    try {
+      const { id, name, category, quantity, unit, location, remark } = item;
+      
+      // 如果没有 ID，生成新 ID
+      const assetId = id || uuidv4();
+      
+      // 检查资产是否存在
+      let stmt = db.prepare('SELECT * FROM assets WHERE id = ?');
+      stmt.bind([assetId]);
+      let exists = stmt.step();
+      stmt.free();
+      
+      if (exists) {
+        // 更新现有资产
+        db.run(`
+          UPDATE assets 
+          SET quantity = quantity + ?, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `, [quantity, assetId]);
+        
+        stmt = db.prepare('SELECT quantity FROM assets WHERE id = ?');
+        stmt.bind([assetId]);
+        const newQuantity = stmt.step() ? stmt.get()[0] : quantity;
+        stmt.free();
+        
+        results.push({
+          status: 'success',
+          type: 'update',
+          name,
+          oldQuantity: newQuantity - quantity,
+          newQuantity,
+          quantity
+        });
+      } else {
+        // 创建新资产
+        db.run(`
+          INSERT INTO assets (id, name, category, quantity, unit, location, description)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `, [assetId, name, category || '其他', quantity, unit || '个', location || '', remark || '']);
+        
+        results.push({
+          status: 'success',
+          type: 'create',
+          name,
+          newQuantity: quantity,
+          quantity,
+          category: category || '其他'
+        });
+      }
+      
+      saveDb();
+    } catch (error) {
+      results.push({
+        status: 'error',
+        name: item.name || '未知',
+        error: error.message
+      });
+    }
+  });
+  
+  res.json({ results });
+});
+
 // ==================== 页面路由 ====================
 
 app.get('/', (req, res) => {
