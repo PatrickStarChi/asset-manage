@@ -1214,3 +1214,170 @@ app.listen(PORT, () => {
     }
   });
 });
+
+// ============ 操作日志 API ============
+
+// 获取操作日志
+app.get('/api/logs', authMiddleware, (req, res) => {
+  if (req.user.role !== 'admin') {
+    res.status(403).json({ error: '权限不足' });
+    return;
+  }
+  
+  const logFile = path.join(__dirname, 'logs', 'operations.log');
+  
+  if (!fs.existsSync(logFile)) {
+    res.json([]);
+    return;
+  }
+  
+  const { limit = 100 } = req.query;
+  
+  fs.readFile(logFile, 'utf8', (err, data) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    
+    const lines = data.trim().split('\n').reverse().slice(0, parseInt(limit));
+    const logs = lines.map(line => {
+      try {
+        return JSON.parse(line);
+      } catch (e) {
+        return { raw: line };
+      }
+    });
+    
+    res.json(logs);
+  });
+});
+
+// ============ 数据备份恢复 API ============
+
+// 获取备份列表
+app.get('/api/backups', authMiddleware, (req, res) => {
+  if (req.user.role !== 'admin') {
+    res.status(403).json({ error: '权限不足' });
+    return;
+  }
+  
+  const backupDir = path.join(__dirname, 'backups');
+  
+  if (!fs.existsSync(backupDir)) {
+    res.json([]);
+    return;
+  }
+  
+  fs.readdir(backupDir, (err, files) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    
+    const backups = files
+      .filter(f => f.startsWith('assets_backup_') && f.endsWith('.db'))
+      .map(f => {
+        const stats = fs.statSync(path.join(backupDir, f));
+        return {
+          filename: f,
+          size: stats.size,
+          createdAt: stats.birthtime
+        };
+      })
+      .sort((a, b) => b.createdAt - a.createdAt);
+    
+    res.json(backups);
+  });
+});
+
+// 创建备份
+app.post('/api/backups', authMiddleware, (req, res) => {
+  if (req.user.role !== 'admin') {
+    res.status(403).json({ error: '权限不足' });
+    return;
+  }
+  
+  const backupDir = path.join(__dirname, 'backups');
+  const dbFile = path.join(__dirname, 'assets.db');
+  const date = new Date().toISOString().replace(/[:.]/g, '').slice(0, 15);
+  const backupFile = path.join(backupDir, `assets_backup_${date}.db`);
+  
+  if (!fs.existsSync(dbFile)) {
+    res.status(404).json({ error: '数据库文件不存在' });
+    return;
+  }
+  
+  fs.mkdirSync(backupDir, { recursive: true });
+  fs.copyFileSync(dbFile, backupFile);
+  
+  // 记录日志
+  logger.info('手动创建备份', { user: req.user.username, file: backupFile });
+  
+  res.json({ success: true, file: backupFile });
+});
+
+// 恢复备份
+app.post('/api/backups/restore', authMiddleware, (req, res) => {
+  if (req.user.role !== 'admin') {
+    res.status(403).json({ error: '权限不足' });
+    return;
+  }
+  
+  const { filename } = req.body;
+  const backupDir = path.join(__dirname, 'backups');
+  const dbFile = path.join(__dirname, 'assets.db');
+  const backupFile = path.join(backupDir, filename);
+  
+  if (!filename || !filename.startsWith('assets_backup_')) {
+    res.status(400).json({ error: '无效的备份文件名' });
+    return;
+  }
+  
+  if (!fs.existsSync(backupFile)) {
+    res.status(404).json({ error: '备份文件不存在' });
+    return;
+  }
+  
+  // 备份当前数据库
+  if (fs.existsSync(dbFile)) {
+    const backupBeforeRestore = path.join(backupDir, `assets_before_restore_${Date.now()}.db`);
+    fs.copyFileSync(dbFile, backupBeforeRestore);
+  }
+  
+  // 恢复数据
+  fs.copyFileSync(backupFile, dbFile);
+  
+  // 记录日志
+  logger.info('恢复数据备份', { user: req.user.username, file: filename });
+  
+  res.json({ success: true, message: '数据已恢复' });
+});
+
+// 删除备份
+app.delete('/api/backups/:filename', authMiddleware, (req, res) => {
+  if (req.user.role !== 'admin') {
+    res.status(403).json({ error: '权限不足' });
+    return;
+  }
+  
+  const { filename } = req.params;
+  const backupDir = path.join(__dirname, 'backups');
+  const backupFile = path.join(backupDir, filename);
+  
+  if (!filename.startsWith('assets_backup_')) {
+    res.status(400).json({ error: '无效的备份文件名' });
+    return;
+  }
+  
+  if (!fs.existsSync(backupFile)) {
+    res.status(404).json({ error: '备份文件不存在' });
+    return;
+  }
+  
+  fs.unlinkSync(backupFile);
+  
+  // 记录日志
+  logger.info('删除备份', { user: req.user.username, file: filename });
+  
+  res.json({ success: true });
+});
