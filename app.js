@@ -397,6 +397,59 @@ app.get('/api/logs', (req, res) => {
   }
 });
 
+// ==================== 用户认证 API ====================
+
+// 用户登录
+app.post('/api/auth/login', (req, res) => {
+  const { username, password } = req.body;
+  
+  // 简单验证（生产环境应使用数据库和加密密码）
+  if (username === 'admin' && password === 'admin123') {
+    const token = 'asset-manage-token-' + Date.now();
+    const user = { username: 'admin', role: 'admin' };
+    
+    // 保存 token 到内存（简化版，生产环境应使用数据库）
+    if (!global.tokens) global.tokens = {};
+    global.tokens[token] = { user, expires: Date.now() + 24 * 60 * 60 * 1000 };
+    
+    logOperation('LOGIN', 'api', `用户 ${username} 登录成功`);
+    res.json({ success: true, token, user });
+  } else {
+    logOperation('LOGIN_FAILED', 'api', `用户 ${username} 登录失败`);
+    res.status(401).json({ error: '用户名或密码错误' });
+  }
+});
+
+// 验证 token
+app.get('/api/auth/me', (req, res) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.replace('Bearer ', '');
+  
+  if (!token || !global.tokens || !global.tokens[token]) {
+    return res.status(401).json({ error: '未授权' });
+  }
+  
+  const tokenData = global.tokens[token];
+  if (Date.now() > tokenData.expires) {
+    delete global.tokens[token];
+    return res.status(401).json({ error: 'Token 已过期' });
+  }
+  
+  res.json({ success: true, user: tokenData.user });
+});
+
+// 用户登出
+app.post('/api/auth/logout', (req, res) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.replace('Bearer ', '');
+  
+  if (token && global.tokens && global.tokens[token]) {
+    delete global.tokens[token];
+  }
+  
+  res.json({ success: true });
+});
+
 // ==================== Excel 导入 API ====================
 
 app.post('/api/import/stock-by-id', (req, res) => {
