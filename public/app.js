@@ -107,33 +107,58 @@ async function loadDashboard() {
           const trends = Object.values(trendsMap).sort((a, b) => a.date.localeCompare(b.date));
           
           if (trends.length > 0) {
-            const maxVal = Math.max(...trends.map(t => t.total || 1), 1);
-            const minVal = Math.min(...trends.map(t => t.total || 0), 0);
-            const chartHeight = Math.min(300, Math.max(180, trends.length * 20));
+            // 按日期分组，合并入库和出库
+            const dateMap = {};
+            trends.forEach(t => {
+              if (!dateMap[t.date]) {
+                dateMap[t.date] = { date: t.date, in: 0, out: 0 };
+              }
+              if (t.type === 'in') dateMap[t.date].in = t.total;
+              else dateMap[t.date].out = t.total;
+            });
+            const dates = Object.values(dateMap).sort((a, b) => a.date.localeCompare(b.date));
+            
+            const maxIn = Math.max(...dates.map(d => d.in || 0), 1);
+            const maxOut = Math.max(...dates.map(d => d.out || 0), 1);
+            const maxVal = Math.max(maxIn, maxOut);
+            const chartHeight = Math.min(350, Math.max(200, dates.length * 25));
             
             trendsContainer.innerHTML = `
-              <div style="display:flex;gap:4px;overflow-x:auto;padding:15px;height:${chartHeight + 60}px;">
-                <!-- Y 轴标签 -->
-                <div style="display:flex;flex-direction:column;justify-content:space-between;font-size:11px;color:#7f8c8d;margin-right:10px;min-width:35px;">
-                  <span>${maxVal}</span>
-                  <span>${Math.round((maxVal + minVal) / 2)}</span>
-                  <span>${minVal}</span>
+              <div style="padding:15px;">
+                <!-- 标题和图例 -->
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+                  <h4 style="margin:0;font-size:14px;color:#2c3e50;">📈 近 30 天出入库趋势</h4>
+                  <div style="display:flex;gap:15px;font-size:12px;">
+                    <span><span style="display:inline-block;width:12px;height:12px;background:#2ecc71;margin-right:5px;border-radius:2px;"></span>入库</span>
+                    <span><span style="display:inline-block;width:12px;height:12px;background:#e74c3c;margin-right:5px;border-radius:2px;"></span>出库</span>
+                  </div>
                 </div>
-                <!-- 图表 -->
-                <div style="display:flex;align-items:flex-end;gap:4px;height:${chartHeight}px;flex:1;">
-                  ${trends.map(t => `
-                    <div style="flex:1;min-width:30px;display:flex;flex-direction:column;align-items:center;">
-                      <div style="width:100%;background:${t.type === 'in' ? '#2ecc71' : '#e74c3c'};height:${Math.max((t.total / maxVal) * (chartHeight - 20), 2)}px;border-radius:4px 4px 0 0;" title="${t.date} ${t.type==='in'?'入库':'出库'} ${t.total}"></div>
-                      <span style="font-size:10px;color:#7f8c8d;margin-top:4px;white-space:nowrap;">${t.date.slice(5)}</span>
-                    </div>
-                  `).join('')}
+                <!-- 图表容器 -->
+                <div style="display:flex;gap:8px;overflow-x:auto;padding:10px 5px;min-height:${chartHeight + 60}px;">
+                  <!-- Y 轴 -->
+                  <div style="display:flex;flex-direction:column;justify-content:space-between;font-size:11px;color:#7f8c8d;margin-right:10px;min-width:40px;text-align:right;">
+                    <span>${maxVal}</span>
+                    <span>${Math.round(maxVal / 2)}</span>
+                    <span>0</span>
+                  </div>
+                  <!-- 柱状图 -->
+                  <div style="display:flex;align-items:flex-end;gap:8px;height:${chartHeight}px;flex:1;position:relative;">
+                    <!-- 网格线 -->
+                    <div style="position:absolute;left:0;right:0;top:0;border-top:1px dashed #ecf0f1;"></div>
+                    <div style="position:absolute;left:0;right:0;top:50%;border-top:1px dashed #ecf0f1;"></div>
+                    <div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid #bdc3c7;"></div>
+                    <!-- 数据柱 -->
+                    ${dates.map(d => `
+                      <div style="flex:1;min-width:50px;display:flex;gap:4px;align-items:flex-end;height:100%;position:relative;">
+                        <div style="width:100%;display:flex;gap:2px;align-items:flex-end;height:100%;">
+                          <div style="flex:1;background:linear-gradient(180deg,#2ecc71,#27ae60);border-radius:4px 4px 0 0;min-height:2px;max-height:${(d.in / maxVal) * 100}%;transition:all 0.3s;" title="入库：${d.in || 0}"></div>
+                          <div style="flex:1;background:linear-gradient(180deg,#e74c3c,#c0392b);border-radius:4px 4px 0 0;min-height:2px;max-height:${(d.out / maxVal) * 100}%;transition:all 0.3s;" title="出库：${d.out || 0}"></div>
+                        </div>
+                        <div style="position:absolute;bottom:-25px;left:0;right:0;text-align:center;font-size:10px;color:#7f8c8d;transform:rotate(-45deg);transform-origin:left;white-space:nowrap;">${d.date.slice(5)}</div>
+                      </div>
+                    `).join('')}
+                  </div>
                 </div>
-              </div>
-              <!-- X 轴标签 -->
-              <div style="display:flex;justify-content:space-between;padding:5px 15px;font-size:11px;color:#7f8c8d;">
-                <span>日期</span>
-                <span><span style="display:inline-block;width:10px;height:10px;background:#2ecc71;margin-right:5px;"></span>入库</span>
-                <span><span style="display:inline-block;width:10px;height:10px;background:#e74c3c;margin-right:5px;"></span>出库</span>
               </div>
             `;
           } else {
@@ -1044,7 +1069,6 @@ async function openQRCode(id) {
     const content = document.getElementById('qrcode-content');
     content.innerHTML = `
       <div style="padding:30px;text-align:center;">
-        <h3 style="margin-bottom:20px;">${asset.name}</h3>
         <div style="background:white;padding:20px;border-radius:10px;display:inline-block;box-shadow:0 2px 10px rgba(0,0,0,0.1);">
           <img src="${qrData.qrCode}" alt="QR Code" style="max-width:250px;">
           <div style="margin-top:15px;font-size:18px;font-weight:bold;color:#2c3e50;">${asset.name}</div>
@@ -1827,10 +1851,26 @@ async function loadAssets() {
 // 加载入库记录
 async function loadInTransactions() {
   const token = localStorage.getItem('token');
-  const res = await fetch('/api/transactions?type=in', {
+  const search = document.getElementById('in-search-input')?.value || '';
+  const dateStart = document.getElementById('in-date-start')?.value || '';
+  const dateEnd = document.getElementById('in-date-end')?.value || '';
+  
+  let url = '/api/transactions?type=in';
+  if (dateStart) url += '&date_start=' + dateStart;
+  if (dateEnd) url += '&date_end=' + dateEnd;
+  
+  const res = await fetch(url, {
     headers: token ? { 'Authorization': 'Bearer ' + token } : {}
   });
-  const transactions = await res.json();
+  let transactions = await res.json();
+  
+  // 前端搜索（按物品名称或 ID）
+  if (search) {
+    transactions = transactions.filter(t => 
+      t.asset_name.includes(search) || t.asset_id.toString().includes(search)
+    );
+  }
+  
   const tbody = document.getElementById('transactions-in-body');
   if (tbody) {
     tbody.innerHTML = transactions.length === 0 ? '<tr><td colspan="7" class="empty-state">暂无记录</td></tr>' :
@@ -1841,10 +1881,26 @@ async function loadInTransactions() {
 // 加载出库记录
 async function loadOutTransactions() {
   const token = localStorage.getItem('token');
-  const res = await fetch('/api/transactions?type=out', {
+  const search = document.getElementById('out-search-input')?.value || '';
+  const dateStart = document.getElementById('out-date-start')?.value || '';
+  const dateEnd = document.getElementById('out-date-end')?.value || '';
+  
+  let url = '/api/transactions?type=out';
+  if (dateStart) url += '&date_start=' + dateStart;
+  if (dateEnd) url += '&date_end=' + dateEnd;
+  
+  const res = await fetch(url, {
     headers: token ? { 'Authorization': 'Bearer ' + token } : {}
   });
-  const transactions = await res.json();
+  let transactions = await res.json();
+  
+  // 前端搜索（按物品名称或 ID）
+  if (search) {
+    transactions = transactions.filter(t => 
+      t.asset_name.includes(search) || t.asset_id.toString().includes(search)
+    );
+  }
+  
   const tbody = document.getElementById('transactions-out-body');
   if (tbody) {
     tbody.innerHTML = transactions.length === 0 ? '<tr><td colspan="7" class="empty-state">暂无记录</td></tr>' :
