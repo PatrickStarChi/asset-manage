@@ -116,7 +116,7 @@ app.post('/api/assets', async (req, res) => {
 
   db.run(
     `INSERT INTO assets (name, category, quantity, unit, location, qr_code) VALUES (?, ?, ?, ?, ?, ?)`,
-    [name, category, quantity || 0, unit || '个', location || '', qrCode],
+    [name, category, quantity || 0, unit || '个', room_number || '', qrCode],
     function (err) {
       if (err) {
         res.status(500).json({ error: err.message });
@@ -125,7 +125,7 @@ app.post('/api/assets', async (req, res) => {
 
       // 记录入库交易
       db.run(
-        `INSERT INTO transactions (asset_id, asset_name, type, quantity, operator, remark) VALUES (?, ?, 'in', ?, '系统', '初始入库')`,
+        `INSERT INTO transactions (asset_id, asset_name, type, quantity, person_name, notes) VALUES (?, ?, 'in', ?, '系统', '初始入库')`,
         [this.lastID, name, quantity || 0],
         (err) => {
           if (err) console.error('交易记录失败:', err);
@@ -242,7 +242,7 @@ app.get('/api/transactions', (req, res) => {
 
 // 入库
 app.post('/api/transactions/in', (req, res) => {
-  const { asset_id, quantity, operator, location, remark } = req.body;
+  const { asset_id, quantity, person_name, room_number, notes } = req.body;
 
   if (!asset_id || !quantity || quantity <= 0) {
     res.status(400).json({ error: '请输入有效的数量' });
@@ -270,8 +270,8 @@ app.post('/api/transactions/in', (req, res) => {
         }
 
         db.run(
-          `INSERT INTO transactions (asset_id, asset_name, type, quantity, operator, location, remark) VALUES (?, ?, 'in', ?, ?, ?, ?)`,
-          [asset_id, asset.name, quantity, operator || '管理员', location || '', remark || ''],
+          `INSERT INTO transactions (asset_id, asset_name, type, quantity, person_name, room_number, notes) VALUES (?, ?, 'in', ?, ?, ?, ?)`,
+          [asset_id, asset.name, quantity, person_name || '管理员', room_number || '', notes || ''],
           function (err) {
             if (err) {
               db.run('ROLLBACK');
@@ -290,7 +290,7 @@ app.post('/api/transactions/in', (req, res) => {
 
 // 出库
 app.post('/api/transactions/out', (req, res) => {
-  const { asset_id, quantity, operator, location, remark } = req.body;
+  const { asset_id, quantity, person_name, room_number, notes } = req.body;
 
   if (!asset_id || !quantity || quantity <= 0) {
     res.status(400).json({ error: '请输入有效的数量' });
@@ -335,8 +335,8 @@ app.post('/api/transactions/out', (req, res) => {
         }
 
         db.run(
-          `INSERT INTO transactions (asset_id, asset_name, type, quantity, operator, location, remark) VALUES (?, ?, 'out', ?, ?, ?, ?)`,
-          [asset_id, asset.name, quantity, operator || '管理员', location || '', remark || ''],
+          `INSERT INTO transactions (asset_id, asset_name, type, quantity, person_name, room_number, notes) VALUES (?, ?, 'out', ?, ?, ?, ?)`,
+          [asset_id, asset.name, quantity, person_name || '管理员', room_number || '', notes || ''],
           function (err) {
             if (err) {
               db.run('ROLLBACK');
@@ -355,7 +355,7 @@ app.post('/api/transactions/out', (req, res) => {
 
 // 扫码出库（通过二维码）
 app.post('/api/scan-out', (req, res) => {
-  const { qr_code, quantity, operator, remark } = req.body;
+  const { qr_code, quantity, person_name, notes } = req.body;
 
   if (!qr_code) {
     res.status(400).json({ error: '请扫描二维码' });
@@ -777,7 +777,7 @@ app.get('/api/export/import-template', authMiddleware, async (req, res) => {
         category: asset.category,
         current_stock: asset.quantity,
         unit: asset.unit,
-        location: asset.location || '',
+        location: asset.room_number || '',
         quantity: '', // 空白待填
         remark: ''
       });
@@ -830,7 +830,7 @@ app.post('/api/import/stock', authMiddleware, async (req, res) => {
         const qrCode = require('uuid').v4();
         const category = item.category || '其他';
         const unit = item.unit || '个';
-        const location = item.location || '';
+        const location = item.room_number || '';
         
         await new Promise((resolveCreate, rejectCreate) => {
           db.run(
@@ -885,8 +885,8 @@ app.post('/api/import/stock', authMiddleware, async (req, res) => {
               reject(err);
             } else {
               db.run(
-                'INSERT INTO transactions (asset_id, asset_name, type, quantity, operator, department, remark) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                [asset.id, asset.name, 'in', parseInt(item.quantity), req.user.username, '', item.remark || 'Excel 批量入库'],
+                'INSERT INTO transactions (asset_id, asset_name, type, quantity, person_name, room_number, notes) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [asset.id, asset.name, 'in', parseInt(item.quantity), req.user.username, '', item.notes || 'Excel 批量入库'],
                 function(err) {
                   if (err) {
                     db.run('ROLLBACK');
@@ -951,8 +951,8 @@ app.post('/api/import/stock-by-id', authMiddleware, async (req, res) => {
               reject(err);
             } else {
               db.run(
-                'INSERT INTO transactions (asset_id, asset_name, type, quantity, operator, department, remark) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                [asset.id, asset.name, 'in', parseInt(item.quantity), req.user.username, '', item.remark || 'Excel 批量入库'],
+                'INSERT INTO transactions (asset_id, asset_name, type, quantity, person_name, room_number, notes) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [asset.id, asset.name, 'in', parseInt(item.quantity), req.user.username, '', item.notes || 'Excel 批量入库'],
                 function(err) {
                   if (err) {
                     db.run('ROLLBACK');
