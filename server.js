@@ -391,7 +391,7 @@ app.get('/api/stats', (req, res) => {
   const stats = {};
 
   // 总资产数量
-  db.get('SELECT SUM(quantity) as total FROM assets', (err, row) => {
+  db.get('SELECT COUNT(*) as total FROM assets WHERE quantity > 0', (err, row) => {
     stats.totalAssets = row?.total || 0;
 
     // 资产种类数
