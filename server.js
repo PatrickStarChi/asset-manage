@@ -116,7 +116,7 @@ app.post('/api/assets', async (req, res) => {
 
   db.run(
     `INSERT INTO assets (name, category, quantity, unit, location, qr_code) VALUES (?, ?, ?, ?, ?, ?)`,
-    [name, category, quantity || 0, unit || '个', room_number || '', qrCode],
+    [name, category, quantity || 0, unit || '个', location || '', qrCode],
     function (err) {
       if (err) {
         res.status(500).json({ error: err.message });
