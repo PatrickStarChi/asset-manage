@@ -1852,9 +1852,28 @@ async function loadAssets() {
 async function loadInTransactions() {
   const token = localStorage.getItem('token');
   const search = document.getElementById('in-search-input')?.value || '';
+  const category = document.getElementById('in-category-filter')?.value || '';
   const dateStart = document.getElementById('in-date-start')?.value || '';
   const dateEnd = document.getElementById('in-date-end')?.value || '';
   const assetId = document.getElementById('in-asset-filter')?.value || '';
+  
+  // 加载分类筛选器（如果是第一次加载）
+  const categoryFilter = document.getElementById('in-category-filter');
+  if (categoryFilter && categoryFilter.options.length === 1) {
+    try {
+      const res = await fetch('/api/categories');
+      const categories = await res.json();
+      categoryFilter.innerHTML = '<option value="">全部类别</option>';
+      categories.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat.name;
+        option.textContent = cat.name;
+        categoryFilter.appendChild(option);
+      });
+    } catch (err) {
+      console.error('加载分类失败:', err);
+    }
+  }
   
   // 加载物品筛选器（如果是第一次加载）
   const assetFilter = document.getElementById('in-asset-filter');
@@ -1864,8 +1883,15 @@ async function loadInTransactions() {
         headers: token ? { 'Authorization': 'Bearer ' + token } : {}
       });
       const assets = await res.json();
+      
+      // 根据分类筛选物品
+      let filteredAssets = assets;
+      if (category) {
+        filteredAssets = assets.filter(a => a.category === category);
+      }
+      
       assetFilter.innerHTML = '<option value="">全部物品</option>';
-      assets.forEach(asset => {
+      filteredAssets.forEach(asset => {
         const option = document.createElement('option');
         option.value = asset.id;
         option.textContent = `${asset.name} (${asset.quantity}${asset.unit})`;
@@ -1908,9 +1934,28 @@ async function loadInTransactions() {
 async function loadOutTransactions() {
   const token = localStorage.getItem('token');
   const search = document.getElementById('out-search-input')?.value || '';
+  const category = document.getElementById('out-category-filter')?.value || '';
   const dateStart = document.getElementById('out-date-start')?.value || '';
   const dateEnd = document.getElementById('out-date-end')?.value || '';
   const assetId = document.getElementById('out-asset-filter')?.value || '';
+  
+  // 加载分类筛选器（如果是第一次加载）
+  const categoryFilter = document.getElementById('out-category-filter');
+  if (categoryFilter && categoryFilter.options.length === 1) {
+    try {
+      const res = await fetch('/api/categories');
+      const categories = await res.json();
+      categoryFilter.innerHTML = '<option value="">全部类别</option>';
+      categories.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat.name;
+        option.textContent = cat.name;
+        categoryFilter.appendChild(option);
+      });
+    } catch (err) {
+      console.error('加载分类失败:', err);
+    }
+  }
   
   // 加载物品筛选器（如果是第一次加载）
   const assetFilter = document.getElementById('out-asset-filter');
@@ -1920,8 +1965,15 @@ async function loadOutTransactions() {
         headers: token ? { 'Authorization': 'Bearer ' + token } : {}
       });
       const assets = await res.json();
+      
+      // 根据分类筛选物品
+      let filteredAssets = assets;
+      if (category) {
+        filteredAssets = assets.filter(a => a.category === category);
+      }
+      
       assetFilter.innerHTML = '<option value="">全部物品</option>';
-      assets.forEach(asset => {
+      filteredAssets.forEach(asset => {
         const option = document.createElement('option');
         option.value = asset.id;
         option.textContent = `${asset.name} (${asset.quantity}${asset.unit})`;
