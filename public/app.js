@@ -108,14 +108,32 @@ async function loadDashboard() {
           
           if (trends.length > 0) {
             const maxVal = Math.max(...trends.map(t => t.total || 1), 1);
+            const minVal = Math.min(...trends.map(t => t.total || 0), 0);
+            const chartHeight = Math.min(300, Math.max(180, trends.length * 20));
+            
             trendsContainer.innerHTML = `
-              <div style="display:flex;align-items:flex-end;height:180px;gap:4px;overflow-x:auto;padding:15px;">
-                ${trends.map(t => `
-                  <div style="flex:1;min-width:30px;display:flex;flex-direction:column;align-items:center;">
-                    <div style="width:100%;background:${t.type === 'in' ? '#2ecc71' : '#e74c3c'};height:${Math.max((t.total / maxVal) * 140, 2)}px;border-radius:4px 4px 0 0;" title="${t.date} ${t.type==='in'?'入库':'出库'} ${t.total}"></div>
-                    <span style="font-size:9px;color:#7f8c8d;margin-top:4px;transform:rotate(-45deg);transform-origin:left;">${t.date.slice(5)}</span>
-                  </div>
-                `).join('')}
+              <div style="display:flex;gap:4px;overflow-x:auto;padding:15px;height:${chartHeight + 60}px;">
+                <!-- Y 轴标签 -->
+                <div style="display:flex;flex-direction:column;justify-content:space-between;font-size:11px;color:#7f8c8d;margin-right:10px;min-width:35px;">
+                  <span>${maxVal}</span>
+                  <span>${Math.round((maxVal + minVal) / 2)}</span>
+                  <span>${minVal}</span>
+                </div>
+                <!-- 图表 -->
+                <div style="display:flex;align-items:flex-end;gap:4px;height:${chartHeight}px;flex:1;">
+                  ${trends.map(t => `
+                    <div style="flex:1;min-width:30px;display:flex;flex-direction:column;align-items:center;">
+                      <div style="width:100%;background:${t.type === 'in' ? '#2ecc71' : '#e74c3c'};height:${Math.max((t.total / maxVal) * (chartHeight - 20), 2)}px;border-radius:4px 4px 0 0;" title="${t.date} ${t.type==='in'?'入库':'出库'} ${t.total}"></div>
+                      <span style="font-size:10px;color:#7f8c8d;margin-top:4px;white-space:nowrap;">${t.date.slice(5)}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+              <!-- X 轴标签 -->
+              <div style="display:flex;justify-content:space-between;padding:5px 15px;font-size:11px;color:#7f8c8d;">
+                <span>日期</span>
+                <span><span style="display:inline-block;width:10px;height:10px;background:#2ecc71;margin-right:5px;"></span>入库</span>
+                <span><span style="display:inline-block;width:10px;height:10px;background:#e74c3c;margin-right:5px;"></span>出库</span>
               </div>
             `;
           } else {
@@ -1021,17 +1039,21 @@ async function openQRCode(id) {
     const baseUrl = window.location.origin;
     const assetUrl = `${baseUrl}/asset/${id}`;
     
+    const downloadName = qrData.download?.filename || `${asset.name}-二维码.png`;
+    
     const content = document.getElementById('qrcode-content');
     content.innerHTML = `
-      <div style="padding:30px;">
+      <div style="padding:30px;text-align:center;">
         <h3 style="margin-bottom:20px;">${asset.name}</h3>
         <div style="background:white;padding:20px;border-radius:10px;display:inline-block;box-shadow:0 2px 10px rgba(0,0,0,0.1);">
           <img src="${qrData.qrCode}" alt="QR Code" style="max-width:250px;">
+          <div style="margin-top:15px;font-size:18px;font-weight:bold;color:#2c3e50;">${asset.name}</div>
         </div>
         <p style="margin-top:20px;font-size:14px;color:#7f8c8d;word-break:break-all;">${assetUrl}</p>
         <p style="margin-top:10px;font-size:13px;color:#667eea;">📱 扫码进入领用表单页面</p>
-        <div style="margin-top:20px;">
+        <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;">
           <a href="/asset/${id}" target="_blank" class="btn btn-primary">🔗 打开领用页面</a>
+          <button class="btn btn-success" onclick="downloadQRCode('${qrData.qrCode}', '${downloadName}')">💾 下载二维码</button>
         </div>
       </div>
     `;
