@@ -673,11 +673,6 @@ async function showAssetTransactions(assetId) {
 
 // 打开资产详情
 async function openAssetDetail(id) {
-  if (!id) {
-    console.error("openAssetDetail: ID 为 null 或 undefined");
-    alert("错误：资产 ID 无效");
-    return;
-  }
   currentAssetId = id;
   try {
     const res = await fetch(`/api/assets/${id}`);
