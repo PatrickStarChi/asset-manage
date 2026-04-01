@@ -244,6 +244,31 @@ app.post('/api/transactions', (req, res) => {
   logOperation('TRANSACTION', 'api', `${action}资产：${asset.name} x${quantity} (领用人：${person_name})`);
 });
 
+// 获取资产二维码
+app.get('/api/assets/:id/qrcode', (req, res) => {
+  const asset = queryOne('SELECT * FROM assets WHERE id = ?', [req.params.id]);
+  if (!asset) return res.status(404).json({ error: '资产不存在' });
+  
+  let qrCode = asset.qr_code;
+  
+  // 如果没有二维码，生成一个
+  if (!qrCode) {
+    const qrData = JSON.stringify({ id: asset.id, name: asset.name, type: 'asset' });
+    QRCode.toDataURL(qrData, (err, url) => {
+      if (err) return res.status(500).json({ error: '生成二维码失败' });
+      
+      run('UPDATE assets SET qr_code = ? WHERE id = ?', [url, asset.id]);
+      saveDb();
+      
+      const filename = `${asset.name.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_')}-二维码.png`;
+      res.json({ qrCode: url, download: { filename } });
+    });
+  } else {
+    const filename = `${asset.name.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_')}-二维码.png`;
+    res.json({ qrCode: qrCode, download: { filename } });
+  }
+});
+
 // 获取交易记录
 app.get('/api/transactions', (req, res) => {
   const { asset_id, limit = 100 } = req.query;

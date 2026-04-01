@@ -651,7 +651,7 @@ async function showQRCode(id) {
         <p style="margin-top: 10px; font-size: 13px; color: #667eea;">📱 扫码进入领用表单页面</p>
         <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
           <a href="/asset/${id}" target="_blank" class="btn btn-primary" style="display: inline-block; text-decoration: none;">🔗 打开领用页面</a>
-          <button class="btn btn-success" onclick="downloadQRCode('${qrData.qrCode}', '${downloadName}')">💾 下载二维码</button>
+          <button class="btn btn-success" onclick="downloadQRCode('${qrData.qrCode}', '${downloadName}', '${asset.name.replace(/'/g, "\\'")}')">💾 下载二维码</button>
           <button class="btn btn-secondary" onclick="closeModal('assetDetailModal')">关闭</button>
         </div>
       </div>
@@ -664,12 +664,43 @@ async function showQRCode(id) {
   }
 }
 
-// 下载二维码
-function downloadQRCode(dataURL, filename) {
-  const link = document.createElement('a');
-  link.download = filename;
-  link.href = dataURL;
-  link.click();
+// 下载二维码（包含资产名称）
+function downloadQRCode(dataURL, filename, assetName = '') {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = function() {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // 设置画布大小（二维码 + 文字区域）
+    const padding = 20;
+    const textHeight = 40;
+    canvas.width = img.width + padding * 2;
+    canvas.height = img.height + padding * 2 + textHeight;
+    
+    // 白色背景
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // 绘制二维码
+    ctx.drawImage(img, padding, padding);
+    
+    // 绘制资产名称
+    if (assetName) {
+      ctx.fillStyle = '#2c3e50';
+      ctx.font = 'bold 16px Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(assetName, canvas.width / 2, img.height + padding * 2 + textHeight / 2);
+    }
+    
+    // 下载
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
+  img.src = dataURL;
 }
 
 // 显示资产出入库记录
@@ -1077,7 +1108,7 @@ async function openQRCode(id) {
         <p style="margin-top:10px;font-size:13px;color:#667eea;">📱 扫码进入领用表单页面</p>
         <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;">
           <a href="/asset/${id}" target="_blank" class="btn btn-primary">🔗 打开领用页面</a>
-          <button class="btn btn-success" onclick="downloadQRCode('${qrData.qrCode}', '${downloadName}')">💾 下载二维码</button>
+          <button class="btn btn-success" onclick="downloadQRCode('${qrData.qrCode}', '${downloadName}', '${asset.name.replace(/'/g, "\\'")}')">💾 下载二维码</button>
         </div>
       </div>
     `;

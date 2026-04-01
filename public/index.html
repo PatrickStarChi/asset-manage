@@ -434,7 +434,11 @@
           <button class="btn btn-secondary" onclick="navigateTo('assets')">← 返回列表</button>
           <h2>📱 二维码</h2>
         </header>
-        <div id="qrcode-content" class="page-content" style="text-align:center;"></div>
+        <div id="qrcode-content" class="page-content" style="text-align:center;">
+          <div id="qrcode-canvas-container" style="margin-bottom:20px;"></div>
+          <h3 id="qrcode-asset-name" style="margin:15px 0;font-size:1.5em;color:#333;"></h3>
+          <button class="btn btn-primary" onclick="downloadQRCode()" style="margin-top:15px;">📥 下载二维码图片</button>
+        </div>
       </section>
 
       <!-- 子页面：出入库记录 -->
