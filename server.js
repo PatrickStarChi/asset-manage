@@ -193,6 +193,7 @@ app.get('/api/assets/:id/qrcode', async (req, res) => {
       const qrCodeImage = await QRCode.toDataURL(assetUrl, {
         width: 300,
         margin: 2,
+        errorCorrectionLevel: 'M',
         color: {
           dark: '#000000',
           light: '#ffffff'
