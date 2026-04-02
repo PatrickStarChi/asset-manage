@@ -788,7 +788,14 @@ async function openAssetDetail(id) {
     document.getElementById('detail-available').textContent = `${available} ${asset.unit}`;
     document.getElementById('detail-description').textContent = asset.description || '-';
     
-    // 填充编辑表单
+    // 填充分类选择（先渲染选项）
+    const categories = await fetch('/api/categories').then(r => r.json());
+    const categorySelect = document.getElementById('edit-asset-category-inline');
+    categorySelect.innerHTML = categories.map(cat => 
+      `<option value="${cat.name}">${cat.name}</option>`
+    ).join('');
+    
+    // 填充编辑表单（再设置值）
     document.getElementById('edit-asset-id-inline').value = id;
     document.getElementById('edit-asset-name-inline').value = asset.name;
     document.getElementById('edit-asset-category-inline').value = asset.category;
@@ -797,13 +804,6 @@ async function openAssetDetail(id) {
     document.getElementById('edit-asset-location-inline').value = asset.location || '';
     document.getElementById('edit-asset-description-inline').value = asset.description || '';
     document.getElementById('edit-asset-min-stock-inline').value = minStock;
-    
-    // 填充分类选择
-    const categories = await fetch('/api/categories').then(r => r.json());
-    const categorySelect = document.getElementById('edit-asset-category-inline');
-    categorySelect.innerHTML = categories.map(cat => 
-      `<option value="${cat.name}">${cat.name}</option>`
-    ).join('');
     
     // 加载变化趋势
     loadAssetTrend(id);
