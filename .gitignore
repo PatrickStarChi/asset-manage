@@ -1,41 +1,49 @@
+# 资产管理系统 .gitignore
+
 # 依赖
 node_modules/
+package-lock.json
 
-# 数据库文件
-assets.db
-*.db.backup
-
-# 日志文件
-logs/*.log
-*.log
+# 数据库
+*.db
+!db/assets.db
 
 # 备份文件
-backups/*.db
+backups/*.db.*
+backups/*.backup.*
+
+# 日志
+logs/*.log
+!logs/.gitkeep
 
 # 上传文件
 uploads/*
 !uploads/.gitkeep
 
 # 临时文件
-tmp/
-temp/
 *.tmp
+*.temp
 *.swp
 *.swo
+*~
 
 # 系统文件
 .DS_Store
 Thumbs.db
 
-# 环境配置
+# 导入脚本（本地使用）
+scripts/batch_*.sql
+
+# 环境变量
 .env
 .env.local
+
+# PM2
+.pm2
+
+# Nginx
+nginx.conf
 
 # IDE
 .vscode/
 .idea/
-
-# 测试文件
-*.test.js
-*.spec.js
-coverage/

@@ -100,6 +100,13 @@
               <div class="stat-label">本月出库</div>
             </div>
           </div>
+          <div class="stat-card" style="cursor:pointer;" onclick="generateFormClaimQR()">
+            <div class="stat-icon">📋</div>
+            <div class="stat-info">
+              <div class="stat-value" style="font-size:1.2em;">批量领用</div>
+              <div class="stat-label">查看二维码</div>
+            </div>
+          </div>
         </div>
 
         <div class="dashboard-sections">
@@ -126,10 +133,10 @@
       <section id="assets" class="page">
         <header class="page-header">
           <h2>资产列表</h2>
-          <div style="display:flex;gap:10px;">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px;">
             <button class="btn btn-primary" onclick="showModal('addAssetModal')">+ 新增资产</button>
+            <button class="btn btn-info" onclick="generateFormClaimQR()">📋 批量领取二维码</button>
             <a href="/batch-print" target="_blank" class="btn btn-success">🖨️ 批量打印二维码</a>
-            <button class="btn btn-info" onclick="generateFormClaimQR()" style="margin-left:10px;">📋 表单领用二维码</button>
             <a href="/batch-request" target="_blank" class="btn btn-primary">📋 批量领用表单</a>
             <button class="btn btn-secondary" onclick="exportAssets()">📥 导出 Excel</button>
             <button class="btn btn-secondary" onclick="showImportModal()">📤 批量入库</button>

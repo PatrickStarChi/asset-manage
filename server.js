@@ -751,6 +751,7 @@ app.get('/asset/:id', (req, res) => {
       res.status(404).send('资产不存在');
       return;
     }
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     res.sendFile(path.join(__dirname, 'public', 'asset-detail.html'));
   });
 });

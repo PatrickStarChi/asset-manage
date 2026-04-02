@@ -1,5 +1,24 @@
 # 资产管理系统 - 版本更新日志
 
+## v1.10 (2026-04-02) - 正式版 🎉
+
+### 新增功能
+- ✅ **批量领取二维码** - 资产列表页新增批量领取二维码按钮，支持扫码进入批量领用表单
+- ✅ **每 30 分钟自动备份** - Crontab 定时备份，保留 7 天内的备份文件
+- ✅ **资产 ID 精确控制** - 支持显式指定资产 ID，确保与外部数据一致
+- ✅ **仪表盘快捷入口** - 添加批量领用二维码快捷卡片
+
+### 优化改进
+- ✅ 资产列表页按钮布局优化，批量领取二维码移至显眼位置
+- ✅ 备份脚本自动清理 7 天前旧备份
+- ✅ 数据库备份文件名格式统一为 `assets.db.backup.YYYYMMDDHHMMSS`
+
+### 修复问题
+- 修复二维码页面访问入口不明显问题
+- 修复资产 ID 自增序列管理问题
+
+---
+
 ## v1.0.5 (2026-04-01)
 
 ### 新增功能
@@ -57,18 +76,18 @@
 ### 功能优化
 
 #### 1. 统计逻辑修复
-**问题**: totalAssets 显示的是所有物品总数量
-**修复**: 改为统计有多少种不同的资产（COUNT(*) WHERE quantity > 0）
+**问题**: totalAssets 显示的是所有物品总数量  
+**修复**: 改为统计有多少种不同的资产（COUNT(*) WHERE quantity > 0）  
 **提交**: a09d478
 
-**修复前**: totalAssets = 137 (所有物品加起来)
+**修复前**: totalAssets = 137 (所有物品加起来)  
 **修复后**: totalAssets = 3 (有 3 种不同的资产)
 
 #### 2. 用户报告问题修复
 - 仪表盘标签改名（总资产数量→资产种类数量，资产种类→资产类别数量）
 - 资产领用警告文字加大（18px 粗体）
 - 统一最低库存检查逻辑
-- 创建用户字段名修复（room_number→department）
+- 创建用户字段名修复（room_number→department）  
 **提交**: 504e8b6
 
 ---
@@ -78,28 +97,28 @@
 ### Bug 修复
 
 #### 1. 资产 ID 为 null
-**问题**: 数据库表结构错误，id 定义为 TEXT 不是 AUTOINCREMENT
-**修复**: 重建 assets 表，id 改为 INTEGER PRIMARY KEY AUTOINCREMENT
+**问题**: 数据库表结构错误，id 定义为 TEXT 不是 AUTOINCREMENT  
+**修复**: 重建 assets 表，id 改为 INTEGER PRIMARY KEY AUTOINCREMENT  
 **提交**: 51ab32d
 
 #### 2. 出入库记录字段名不匹配
-**问题**: 前后端字段名不一致（operator/person_name, department/room_number, remark/notes）
-**修复**: 统一为 person_name, room_number, notes
+**问题**: 前后端字段名不一致（operator/person_name, department/room_number, remark/notes）  
+**修复**: 统一为 person_name, room_number, notes  
 **提交**: 2489409
 
 #### 3. 401 Unauthorized 错误
-**问题**: 硬编码生产域名导致本地访问跨域
-**修复**: 使用 window.location.origin
+**问题**: 硬编码生产域名导致本地访问跨域  
+**修复**: 使用 window.location.origin  
 **提交**: 31257af
 
 #### 4. 资产列表不显示
-**问题**: assets.map 时 assets 不是数组
-**修复**: 添加 Array.isArray 验证
+**问题**: assets.map 时 assets 不是数组  
+**修复**: 添加 Array.isArray 验证  
 **提交**: 31257af
 
 #### 5. app.js 语法错误
-**问题**: sed 替换导致引号嵌套错误
-**修复**: 使用单引号包裹 HTML 字符串
+**问题**: sed 替换导致引号嵌套错误  
+**修复**: 使用单引号包裹 HTML 字符串  
 **提交**: dd27b05
 
 ---
@@ -130,4 +149,4 @@
 
 ---
 
-**最后更新**: 2026-04-01 23:35 CST
+**最后更新**: 2026-04-02 18:00 CST

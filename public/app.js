@@ -866,6 +866,11 @@ function openFormClaim() {
   window.open('/batch-request', '_blank');
 }
 
+// 生成表单领用二维码（导航到二维码页面）
+function generateFormClaimQR() {
+  navigateTo('page-batch-request-qr');
+}
+
 // 加载物品变化趋势
 async function loadAssetTrend(assetId) {
   try {
