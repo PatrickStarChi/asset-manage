@@ -774,7 +774,7 @@ async function openAssetDetail(id) {
     const res = await fetch(`/api/assets/${id}`);
     const asset = await res.json();
     
-    const minStock = asset.min_quantity || 5;
+    const minStock = (asset.min_quantity !== undefined && asset.min_quantity !== null) ? asset.min_quantity : 5;
     const available = Math.max(0, asset.quantity - minStock);
     
     // 填充详情数据

@@ -167,8 +167,8 @@
     }
 
     .qr-card img {
-      width: 80px;
-      height: 80px;
+      width: 120px;
+      height: 120px;
       object-fit: contain;
       margin-bottom: 8px;
       display: block;
@@ -240,8 +240,8 @@
     <div>
       <label>每页打印数量：</label>
       <select id="layout-select">
-        <option value="12">12 张/页 (3×4) - 二维码 80px</option>
-        <option value="14">14 张/页 (2×7) - 二维码 80px</option>
+        <option value="12">12 张/页 (3×4) - 二维码 120px</option>
+        <option value="14">14 张/页 (2×7) - 二维码 120px</option>
       </select>
     </div>
 
@@ -405,8 +405,8 @@
         // 创建图片
         const img = new Image();
         img.src = data.qrCode;
-        img.width = 80;
-        img.height = 80;
+        img.width = 120;
+        img.height = 120;
         img.alt = 'QR Code';
         img.style.marginBottom = '8px';
         
