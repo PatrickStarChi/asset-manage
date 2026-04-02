@@ -228,6 +228,19 @@
             <input type="hidden" id="asset-name" value="${currentAsset.name}">
             
             <div class="form-group">
+              <label>领用科室 <span class="required">*</span></label>
+              <select name="department" required class="form-select" id="department-select">
+                <option value="">请选择科室</option>
+                <option value="办公室">办公室</option>
+                <option value="党建工作科">党建工作科</option>
+                <option value="规划发展科">规划发展科</option>
+                <option value="产权管理科">产权管理科</option>
+                <option value="考核监督科">考核监督科</option>
+                <option value="镇属资产指导管理科">镇属资产指导管理科</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
               <label>领用人 <span class="required">*</span></label>
               <input type="text" name="operator" required class="form-input" placeholder="请输入姓名" id="operator-input">
             </div>
@@ -276,9 +289,10 @@
         asset_id: parseInt(document.getElementById('asset-id').value),
         asset_name: document.getElementById('asset-name').value,
         quantity: parseInt(document.getElementById('quantity-input').value),
+        department: document.getElementById('department-select').value,  // 领用科室
         person_name: document.getElementById('operator-input').value,  // 领用人
         room_number: form.location?.value || '',  // 房间号
-        notes: form.remark?.value || '领用' || '领用'  // 备注
+        notes: form.remark?.value || '扫码领用'  // 备注
       };
       
       try {
@@ -295,6 +309,7 @@
             <div class="success">
               <h3>✅ 领用成功！</h3>
               <p style="margin: 15px 0;">物品：<strong>${data.asset_name}</strong></p>
+              <p>领用科室：<strong>${data.department || '-'}</strong></p>
               <p>领用人：<strong>${data.person_name}</strong></p>
               <p>房间号：<strong>${data.room_number || '-'}</strong></p>
               <p>数量：<strong>${data.quantity}</strong></p>
