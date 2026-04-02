@@ -18,6 +18,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// 移动端页面路由
+app.get('/mobile', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'mobile.html'));
+});
+
 // 认证中间件
 const authMiddleware = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1] || req.query.token;

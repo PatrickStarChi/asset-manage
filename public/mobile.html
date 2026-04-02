@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#667eea">
+  <title>资产管理 - 移动版</title>
+  <link rel="stylesheet" href="mobile-style.css">
+</head>
+<body>
+  <!-- 登录页 -->
+  <div id="mobile-login" class="mobile-page active">
+    <div class="login-container">
+      <div class="login-logo">📦</div>
+      <h1 class="login-title">资产管理系统</h1>
+      <form id="mobile-login-form" class="login-form">
+        <div class="form-group">
+          <input type="text" id="mobile-login-username" class="mobile-input" placeholder="用户名" required>
+        </div>
+        <div class="form-group">
+          <input type="password" id="mobile-login-password" class="mobile-input" placeholder="密码" required>
+        </div>
+        <button type="submit" class="mobile-btn primary full-width">登录</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 主页面 -->
+  <div id="mobile-main" class="mobile-page">
+    <!-- 顶部导航 -->
+    <header class="mobile-header">
+      <div class="header-left">
+        <h1>📦 资产管理</h1>
+      </div>
+      <div class="header-right">
+        <button class="icon-btn" onclick="logout()">🚪</button>
+      </div>
+    </header>
+
+    <!-- 底部标签栏 -->
+    <nav class="mobile-tab-bar">
+      <button class="tab-btn active" data-tab="dashboard">
+        <span class="tab-icon">📊</span>
+        <span class="tab-label">首页</span>
+      </button>
+      <button class="tab-btn" data-tab="assets">
+        <span class="tab-icon">📋</span>
+        <span class="tab-label">资产</span>
+      </button>
+      <button class="tab-btn" data-tab="scan">
+        <span class="tab-icon">📷</span>
+        <span class="tab-label">扫码</span>
+      </button>
+      <button class="tab-btn" data-tab="in">
+        <span class="tab-icon">📥</span>
+        <span class="tab-label">入库</span>
+      </button>
+      <button class="tab-btn" data-tab="out">
+        <span class="tab-icon">📤</span>
+        <span class="tab-label">出库</span>
+      </button>
+    </nav>
+
+    <!-- 页面内容 -->
+    <main class="mobile-content">
+      <!-- 首页 -->
+      <section id="mobile-dashboard" class="mobile-tab-content active">
+        <div class="stats-card">
+          <div class="stat-item">
+            <div class="stat-value" id="m-total-assets">0</div>
+            <div class="stat-label">总资产</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="m-category-count">0</div>
+            <div class="stat-label">分类数</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="m-month-in">0</div>
+            <div class="stat-label">本月入库</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="m-month-out">0</div>
+            <div class="stat-label">本月出库</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title">分类统计</h3>
+          <div id="m-category-stats" class="category-stats"></div>
+        </div>
+      </section>
+
+      <!-- 资产列表 -->
+      <section id="mobile-assets" class="mobile-tab-content">
+        <div class="search-bar">
+          <input type="text" id="m-search-input" class="mobile-input" placeholder="搜索资产...">
+        </div>
+        <div id="m-assets-list" class="assets-list"></div>
+      </section>
+
+      <!-- 扫码 -->
+      <section id="mobile-scan" class="mobile-tab-content">
+        <div class="scan-card">
+          <div class="scan-type-selector">
+            <button class="scan-type-btn active" data-type="out">📤 出库</button>
+            <button class="scan-type-btn" data-type="in">📥 入库</button>
+          </div>
+          <div class="scan-input-area">
+            <input type="text" id="m-scan-input" class="mobile-input" placeholder="扫描二维码或输入 ID" inputmode="text">
+            <button class="mobile-btn primary full-width" onclick="mobileHandleScan()">扫码</button>
+          </div>
+          <div id="m-scan-result" class="scan-result"></div>
+        </div>
+      </section>
+
+      <!-- 入库记录 -->
+      <section id="mobile-in" class="mobile-tab-content">
+        <h3 class="section-title">📥 入库记录</h3>
+        <div id="m-in-list" class="transaction-list"></div>
+      </section>
+
+      <!-- 出库记录 -->
+      <section id="mobile-out" class="mobile-tab-content">
+        <h3 class="section-title">📤 出库记录</h3>
+        <div id="m-out-list" class="transaction-list"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 资产详情弹窗 -->
+  <div id="m-asset-modal" class="mobile-modal">
+    <div class="modal-overlay" onclick="closeAssetModal()"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="m-modal-title">资产详情</h2>
+        <button class="close-btn" onclick="closeAssetModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="asset-info">
+          <div class="info-row">
+            <span class="label">名称</span>
+            <span class="value" id="m-detail-name">-</span>
+          </div>
+          <div class="info-row">
+            <span class="label">分类</span>
+            <span class="value" id="m-detail-category">-</span>
+          </div>
+          <div class="info-row">
+            <span class="label">库存</span>
+            <span class="value" id="m-detail-quantity">-</span>
+          </div>
+          <div class="info-row">
+            <span class="label">位置</span>
+            <span class="value" id="m-detail-location">-</span>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="mobile-btn success" onclick="mobileStockIn()">📥 入库</button>
+          <button class="mobile-btn danger" onclick="mobileStockOut()">📤 出库</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="mobile-app.js"></script>
+</body>
+</html>
