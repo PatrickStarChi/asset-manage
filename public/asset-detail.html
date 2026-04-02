@@ -275,10 +275,10 @@
       const data = {
         asset_id: parseInt(document.getElementById('asset-id').value),
         asset_name: document.getElementById('asset-name').value,
-        quantity: parseInt(form.quantity.value),
-        person_name: form.operator.value,  // 领用人
-        room_number: form.location.value,  // 房间号
-        notes: form.remark.value || '领用'  // 备注
+        quantity: parseInt(document.getElementById('quantity-input').value),
+        person_name: document.getElementById('operator-input').value,  // 领用人
+        room_number: form.location?.value || '',  // 房间号
+        notes: form.remark?.value || '领用' || '领用'  // 备注
       };
       
       try {
