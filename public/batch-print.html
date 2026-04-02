@@ -230,29 +230,13 @@
       }
     }
   </style>
-  <!-- 二维码生成库 -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-  <script>
-    // 检查 QRCode 库是否加载成功
-    window.addEventListener('DOMContentLoaded', () => {
-      if (typeof QRCode === 'undefined') {
-        console.error('QRCode 库加载失败，尝试备用 CDN...');
-        // 备用 CDN
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js';
-        script.onload = () => {
-          if (typeof QRCode === 'undefined') {
-            alert('二维码库加载失败，请检查网络连接后刷新页面');
-          } else {
-            console.log('✅ 从备用 CDN 加载成功');
-          }
-        };
-        document.head.appendChild(script);
-      } else {
-        console.log('✅ QRCode 库加载成功');
-      }
-    });
-  </script>
+  <style>
+    .loading-tip {
+      padding: 20px;
+      text-align: center;
+      color: #666;
+    }
+  </style>
 </head>
 <body>
   <!-- 选择区域 -->
@@ -411,35 +395,22 @@
       const card = document.createElement('div');
       card.className = 'qr-card';
       
-      // 生成二维码 URL
-      const baseUrl = window.location.origin;
-      const assetUrl = `${baseUrl}/asset/${asset.id}`;
-      
       try {
-        console.log('[QR] 正在生成:', asset.name, 'ID:', asset.id);
+        console.log('[QR] 正在获取:', asset.name, 'ID:', asset.id);
         
-        // 检查 QRCode 库
-        if (typeof QRCode === 'undefined') {
-          console.error('[QR] QRCode 库未定义');
-          throw new Error('QRCode 库未加载');
+        // 调用服务器 API 获取二维码
+        const res = await fetch(`/api/assets/${asset.id}/qrcode`);
+        const data = await res.json();
+        
+        if (!res.ok || !data.qrCode) {
+          throw new Error(data.error || '二维码生成失败');
         }
         
-        // 生成二维码
-        const qrCode = await QRCode.toDataURL(assetUrl, {
-          width: 200,
-          margin: 1,
-          errorCorrectionLevel: 'M',
-          color: {
-            dark: '#000000',
-            light: '#ffffff'
-          }
-        });
+        console.log('[QR] 获取成功:', asset.name);
         
-        console.log('[QR] 生成成功:', asset.name, '长度:', qrCode.length);
-        
-        // 创建图片并等待加载
+        // 创建图片
         const img = new Image();
-        img.src = qrCode;
+        img.src = data.qrCode;
         img.width = 70;
         img.height = 70;
         img.alt = 'QR Code';
@@ -452,10 +423,10 @@
         
         return card;
       } catch (err) {
-        console.error('[QR] 生成失败:', asset.name, err.message);
+        console.error('[QR] 获取失败:', asset.name, err.message);
         card.innerHTML = `
           <div style="color: red; font-size: 10px; text-align: center;">
-            ❌ 生成失败<br>${err.message}
+            ❌ 获取失败<br>${err.message}
           </div>
           <div class="asset-name">${asset.name}</div>
         `;
@@ -470,23 +441,24 @@
       testDiv.style.display = 'block';
       
       try {
-        if (typeof QRCode === 'undefined') {
-          output.innerHTML = '<span style="color: red;">❌ QRCode 库未加载</span>';
+        output.innerHTML = '<span style="color: blue;">⏳ 正在获取测试二维码...</span>';
+        
+        // 调用服务器 API 获取第一个资产的二维码
+        if (allAssets.length === 0) {
+          output.innerHTML = '<span style="color: red;">❌ 没有资产可测试</span>';
           return;
         }
         
-        output.innerHTML = '<span style="color: blue;">⏳ 正在生成测试二维码...</span>';
+        const res = await fetch(`/api/assets/${allAssets[0].id}/qrcode`);
+        const data = await res.json();
         
-        const testUrl = window.location.origin + '/test';
-        const qrCode = await QRCode.toDataURL(testUrl, {
-          width: 200,
-          margin: 1,
-          errorCorrectionLevel: 'M'
-        });
+        if (!res.ok || !data.qrCode) {
+          throw new Error(data.error || '二维码获取失败');
+        }
         
         output.innerHTML = `
-          <span style="color: green;">✅ 二维码库工作正常！</span><br>
-          <img src="${qrCode}" style="margin-top: 10px; border: 1px solid #ddd;">
+          <span style="color: green;">✅ 服务器 API 工作正常！</span><br>
+          <img src="${data.qrCode}" style="margin-top: 10px; border: 1px solid #ddd;">
         `;
       } catch (err) {
         output.innerHTML = `<span style="color: red;">❌ 错误：${err.message}</span>`;
