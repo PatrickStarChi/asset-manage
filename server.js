@@ -305,7 +305,7 @@ app.post('/api/transactions/in', (req, res) => {
 
 // 出库
 app.post('/api/transactions/out', (req, res) => {
-  const { asset_id, quantity, person_name, room_number, notes } = req.body;
+  const { asset_id, quantity, person_name, room_number, location, notes } = req.body;
 
   if (!asset_id || !quantity || quantity <= 0) {
     res.status(400).json({ error: '请输入有效的数量' });
