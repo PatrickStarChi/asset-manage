@@ -157,27 +157,6 @@ app.post('/api/assets', async (req, res) => {
 });
 
 // 更新资产
-app.put('/api/assets/:id', (req, res) => {
-  const { name, category, quantity, unit, location } = req.body;
-  const { id } = req.params;
-
-  db.run(
-    `UPDATE assets SET name = ?, category = ?, quantity = ?, unit = ?, location = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-    [name, category, quantity, unit, location, id],
-    function (err) {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      if (this.changes === 0) {
-        res.status(404).json({ error: '资产不存在' });
-        return;
-      }
-      res.json({ success: true });
-    }
-  );
-});
-
 // 删除资产
 app.delete('/api/assets/:id', (req, res) => {
   db.run('DELETE FROM assets WHERE id = ?', [req.params.id], function (err) {
