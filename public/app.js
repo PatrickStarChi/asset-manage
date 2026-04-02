@@ -934,7 +934,7 @@ async function handleEditAssetInline(e) {
     unit: document.getElementById('edit-asset-unit-inline').value,
     location: document.getElementById('edit-asset-location-inline').value,
     description: document.getElementById('edit-asset-description-inline').value,
-    min_quantity: parseInt(document.getElementById('edit-asset-min-stock-inline').value) || 5
+    min_quantity: document.getElementById('edit-asset-min-stock-inline').value !== '' ? parseInt(document.getElementById('edit-asset-min-stock-inline').value) : 5
   };
   
   const token = localStorage.getItem('token');

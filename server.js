@@ -619,7 +619,7 @@ app.put('/api/assets/:id', authMiddleware, (req, res) => {
   
   db.run(
     `UPDATE assets SET name = ?, category = ?, quantity = ?, unit = ?, location = ?, description = ?, min_quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-    [name, category, quantity, unit, location, description, min_quantity || 5, assetId],
+    [name, category, quantity, unit, location, description, (min_quantity !== undefined && min_quantity !== null) ? min_quantity : 5, assetId],
     function(err) {
       if (err) {
         res.status(500).json({ error: err.message });
