@@ -136,45 +136,46 @@
       padding: 10mm;
     }
 
-    /* 8 列布局 (2x4) */
-    .layout-8 {
+    /* 12 张布局 (3x4) */
+    .layout-12 {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       grid-template-rows: repeat(4, 1fr);
-      gap: 5mm;
+      gap: 4mm;
       height: 277mm;
     }
 
-    /* 10 列布局 (2x5) */
-    .layout-10 {
+    /* 14 张布局 (2x7) */
+    .layout-14 {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      grid-template-rows: repeat(5, 1fr);
-      gap: 4mm;
+      grid-template-rows: repeat(7, 1fr);
+      gap: 3mm;
       height: 277mm;
     }
 
     /* 二维码卡片 */
     .qr-card {
-      border: 1px dashed #ccc;
-      padding: 8px;
+      border: 1px dashed #999;
+      padding: 6px;
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: center;
       page-break-inside: avoid;
       background: #fff;
     }
 
     .qr-card img {
-      width: 70px;
-      height: 70px;
+      width: 50px;
+      height: 50px;
       object-fit: contain;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       display: block;
     }
 
     .qr-card .asset-name {
-      font-size: 13px;
+      font-size: 11px;
       font-weight: 600;
       text-align: center;
       color: #000;
@@ -182,6 +183,7 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       max-width: 100%;
+      line-height: 1.2;
     }
 
     /* 裁剪线标记 */
@@ -238,8 +240,8 @@
     <div>
       <label>每页打印数量：</label>
       <select id="layout-select">
-        <option value="8">8 张/页 (2×4)</option>
-        <option value="10">10 张/页 (2×5)</option>
+        <option value="12">12 张/页 (3×4) - 二维码 50px</option>
+        <option value="14">14 张/页 (2×7) - 二维码 50px</option>
       </select>
     </div>
 
@@ -356,7 +358,7 @@
         pageDiv.className = 'a4-page';
         
         const gridDiv = document.createElement('div');
-        gridDiv.className = layout === '8' ? 'layout-8' : 'layout-10';
+        gridDiv.className = layout === '12' ? 'layout-12' : 'layout-14';
         
         console.log('生成第', p + 1, '页，', pageAssets.length, '个资产');
         
@@ -403,10 +405,10 @@
         // 创建图片
         const img = new Image();
         img.src = data.qrCode;
-        img.width = 70;
-        img.height = 70;
+        img.width = 50;
+        img.height = 50;
         img.alt = 'QR Code';
-        img.style.marginBottom = '8px';
+        img.style.marginBottom = '6px';
         
         card.innerHTML = `
           <div class="asset-name">${asset.name}</div>
