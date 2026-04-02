@@ -16,25 +16,26 @@ const JWT_SECRET = process.env.JWT_SECRET || 'asset-management-secret-key-2026';
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+
+// UA 检测自动跳转（必须在 static 之前）
+app.get('/', (req, res, next) => {
+  const ua = req.headers['user-agent'] || '';
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+  
+  // 如果是移动端且访问首页，跳转到移动端页面
+  if (isMobile) {
+    res.redirect('/mobile');
+  } else {
+    next();
+  }
+});
 
 // 移动端页面路由
 app.get('/mobile', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'mobile.html'));
 });
 
-// UA 检测自动跳转
-app.get('/', (req, res, next) => {
-  const ua = req.headers['user-agent'] || '';
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-  
-  // 如果是移动端且访问首页，跳转到移动端页面
-  if (isMobile && req.path === '/') {
-    res.redirect('/mobile');
-  } else {
-    next();
-  }
-});
+app.use(express.static(path.join(__dirname, 'public')));
 
 // 认证中间件
 const authMiddleware = (req, res, next) => {

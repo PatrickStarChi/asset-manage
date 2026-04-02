@@ -12,6 +12,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="mobile-style.css">
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </head>
 <body>
   <!-- 登录页 -->
@@ -111,9 +112,23 @@
             <button class="scan-type-btn active" data-type="out">📤 出库</button>
             <button class="scan-type-btn" data-type="in">📥 入库</button>
           </div>
+          
+          <!-- 摄像头区域 -->
+          <div class="camera-area">
+            <video id="m-qr-video" class="qr-video" autoplay playsinline muted></video>
+            <canvas id="m-qr-canvas" class="qr-canvas" style="display:none;"></canvas>
+            <div id="m-scan-overlay" class="scan-overlay">
+              <div class="scan-frame"></div>
+            </div>
+          </div>
+          
+          <button id="m-camera-btn" class="mobile-btn secondary full-width" onclick="toggleCamera()">
+            📷 打开摄像头
+          </button>
+          
           <div class="scan-input-area">
-            <input type="text" id="m-scan-input" class="mobile-input" placeholder="扫描二维码或输入 ID" inputmode="text">
-            <button class="mobile-btn primary full-width" onclick="mobileHandleScan()">扫码</button>
+            <input type="text" id="m-scan-input" class="mobile-input" placeholder="或手动输入资产 ID" inputmode="text">
+            <button class="mobile-btn primary full-width" onclick="mobileHandleScan()">确认</button>
           </div>
           <div id="m-scan-result" class="scan-result"></div>
         </div>

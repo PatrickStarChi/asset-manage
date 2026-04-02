@@ -2,6 +2,9 @@
 let currentUser = null;
 let currentScanType = 'out';
 let currentAssetId = null;
+let cameraStream = null;
+let cameraInterval = null;
+let isCameraOpen = false;
 
 // 初始化
 document.addEventListener('DOMContentLoaded', async () => {
@@ -102,8 +105,88 @@ function initMobileApp() {
   });
 }
 
+// 切换摄像头
+async function toggleCamera() {
+  const video = document.getElementById('m-qr-video');
+  const canvas = document.getElementById('m-qr-canvas');
+  const cameraArea = document.querySelector('.camera-area');
+  const cameraBtn = document.getElementById('m-camera-btn');
+  
+  if (isCameraOpen) {
+    // 关闭摄像头
+    stopCamera();
+    cameraArea.classList.remove('active');
+    cameraBtn.textContent = '📷 打开摄像头';
+  } else {
+    // 打开摄像头
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' } // 使用后置摄像头
+      });
+      video.srcObject = cameraStream;
+      video.setAttribute('playsinline', true);
+      cameraArea.classList.add('active');
+      cameraBtn.textContent = '📷 关闭摄像头';
+      isCameraOpen = true;
+      
+      // 开始扫描
+      startScanLoop();
+    } catch (err) {
+      console.error('摄像头启动失败:', err);
+      alert('无法访问摄像头，请手动输入资产 ID');
+    }
+  }
+}
+
+// 停止摄像头
+function stopCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(track => track.stop());
+    cameraStream = null;
+  }
+  if (cameraInterval) {
+    clearInterval(cameraInterval);
+    cameraInterval = null;
+  }
+  isCameraOpen = false;
+}
+
+// 循环扫描
+function startScanLoop() {
+  const video = document.getElementById('m-qr-video');
+  const canvas = document.getElementById('m-qr-canvas');
+  const ctx = canvas.getContext('2d');
+  
+  cameraInterval = setInterval(() => {
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      canvas.height = video.videoHeight;
+      canvas.width = video.videoWidth;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height);
+      
+      if (code) {
+        console.log('识别到二维码:', code.data);
+        document.getElementById('m-scan-input').value = code.data;
+        mobileHandleScan();
+        stopCamera();
+        document.querySelector('.camera-area').classList.remove('active');
+        document.getElementById('m-camera-btn').textContent = '📷 打开摄像头';
+      }
+    }
+  }, 500); // 每 500ms 扫描一次
+}
+
 // 切换标签
 function switchTab(tab) {
+  // 离开扫码页时关闭摄像头
+  if (tab !== 'scan' && isCameraOpen) {
+    stopCamera();
+    document.querySelector('.camera-area')?.classList.remove('active');
+    document.getElementById('m-camera-btn').textContent = '📷 打开摄像头';
+  }
+  
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tab);
   });

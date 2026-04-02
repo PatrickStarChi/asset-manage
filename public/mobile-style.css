@@ -372,6 +372,63 @@ body {
   margin-bottom: 16px;
 }
 
+/* 摄像头区域 */
+.camera-area {
+  position: relative;
+  width: 100%;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  display: none;
+}
+
+.camera-area.active {
+  display: block;
+}
+
+.qr-video {
+  width: 100%;
+  height: auto;
+  max-height: 300px;
+  object-fit: cover;
+}
+
+.qr-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.scan-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.scan-frame {
+  width: 200px;
+  height: 200px;
+  border: 3px solid rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+}
+
+.mobile-btn.secondary {
+  background: var(--bg);
+  color: var(--text);
+  border: 2px solid var(--border);
+  margin-bottom: 16px;
+}
+
 .scan-result {
   min-height: 80px;
   padding: 16px;
