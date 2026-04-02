@@ -1435,11 +1435,13 @@ async function handleScan() {
       <strong>${asset.name}</strong><br>
       分类：${asset.category}<br>
       当前库存：${asset.quantity} ${asset.unit}<br>
-      <div style="margin-top: 15px;">
+      <div class="scan-action-area" style="margin-top: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
         <input type="number" id="scan-quantity" placeholder="数量" min="1" value="1" 
-               style="padding: 8px; width: 100px; margin-right: 10px;" 
+               inputmode="numeric" pattern="[0-9]*"
+               style="padding: 10px; width: 120px; font-size: 16px;" 
                ${currentScanType === 'out' && asset.quantity === 0 ? 'disabled' : ''}>
-        <button class="btn btn-primary btn-small" onclick="confirmScanOut(${asset.id})">
+        <button class="btn btn-primary" onclick="confirmScanOut(${asset.id})" 
+                style="padding: 10px 20px; font-size: 16px; min-width: 100px;">
           确认${currentScanType === 'in' ? '入库' : '出库'}
         </button>
       </div>
