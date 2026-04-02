@@ -1380,8 +1380,9 @@ async function loadTransactionsByType(type, tbodyId, prefix) {
           <td>${trans.id}</td>
           <td>${trans.asset_name} <small style="color:#7f8c8d;">(#${trans.asset_id})</small></td>
           <td><span class="badge badge-${type}">${trans.quantity}</span></td>
+          ${isOut ? `<td>${trans.room_number || '-'}</td>` : '<td>-</td>'}
           <td>${trans.person_name || '-'}</td>
-          <td>${trans.room_number || '-'}</td>
+          <td>${trans.location || '-'}</td>
           <td>${trans.notes || '-'}</td>
           <td>${new Date(trans.created_at).toLocaleString('zh-CN')}</td>
         </tr>

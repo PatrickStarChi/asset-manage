@@ -399,6 +399,76 @@ app.outHandler = (req, res) => {
   app.post('/api/transactions/out')(req, res);
 };
 
+// 导出出入库记录 Excel
+app.get('/api/export/transactions', authMiddleware, async (req, res) => {
+  const { type } = req.query;
+  
+  try {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(type === 'in' ? '入库记录' : '出库记录');
+    
+    // 设置列宽
+    worksheet.columns = [
+      { header: 'ID', key: 'id', width: 8 },
+      { header: '资产名称', key: 'asset_name', width: 25 },
+      { header: '类型', key: 'type', width: 10 },
+      { header: '数量', key: 'quantity', width: 10 },
+      { header: '领用科室', key: 'room_number', width: 20 },
+      { header: '房间号', key: 'location', width: 15 },
+      { header: '经办人', key: 'person_name', width: 15 },
+      { header: '备注', key: 'notes', width: 30 },
+      { header: '时间', key: 'created_at', width: 20 }
+    ];
+    
+    // 设置表头样式
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF667eea' }
+    };
+    worksheet.getRow(1).font = { color: { argb: 'FFFFFFFF' }, bold: true };
+    
+    // 查询数据
+    const query = type === 'in' 
+      ? 'SELECT * FROM transactions WHERE type = "in" ORDER BY created_at DESC'
+      : 'SELECT * FROM transactions WHERE type = "out" ORDER BY created_at DESC';
+    
+    db.all(query, (err, rows) => {
+      if (err) {
+        res.status(500).json({ error: '导出失败' });
+        return;
+      }
+      
+      // 添加数据行
+      rows.forEach(row => {
+        worksheet.addRow({
+          id: row.id,
+          asset_name: row.asset_name,
+          type: row.type === 'in' ? '入库' : '出库',
+          quantity: row.quantity,
+          room_number: row.room_number || '-',
+          location: row.location || '-',
+          person_name: row.person_name,
+          notes: row.notes || '-',
+          created_at: new Date(row.created_at).toLocaleString('zh-CN')
+        });
+      });
+      
+      // 生成文件
+      const buffer = await workbook.xlsx.writeBuffer();
+      const filename = `${type === 'in' ? '入库' : '出库'}记录_${new Date().toISOString().split('T')[0]}.xlsx`;
+      
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(buffer);
+    });
+  } catch (err) {
+    console.error('导出失败:', err);
+    res.status(500).json({ error: '导出失败：' + err.message });
+  }
+});
+
 // ============ 统计 API ============
 
 // 获取统计数据

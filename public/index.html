@@ -158,6 +158,7 @@
       <section id="transactions-in" class="page">
         <header class="page-header">
           <h2>📥 入库记录</h2>
+          <a href="/api/export/transactions?type=in" target="_blank" class="btn btn-success">📊 导出 Excel</a>
         </header>
         <div class="filters">
           <input type="text" id="in-search-input" class="search-input" placeholder="搜索物品名称或 ID...">
@@ -194,6 +195,7 @@
       <section id="transactions-out" class="page">
         <header class="page-header">
           <h2>📤 出库记录</h2>
+          <a href="/api/export/transactions?type=out" target="_blank" class="btn btn-success">📊 导出 Excel</a>
         </header>
         <div class="filters">
           <input type="text" id="out-search-input" class="search-input" placeholder="搜索物品名称或 ID...">
@@ -214,6 +216,7 @@
                 <th>ID</th>
                 <th>物品名称</th>
                 <th>出库数量</th>
+                <th>领用科室</th>
                 <th>领用人</th>
                 <th>房间号</th>
                 <th>备注</th>
@@ -416,6 +419,18 @@
             <div class="form-group">
               <label>出库数量 *</label>
               <input type="number" name="quantity" required min="1" class="form-input" id="stock-out-quantity">
+            </div>
+            <div class="form-group">
+              <label>领用科室 *</label>
+              <select name="room_number" required class="form-select" id="stock-out-department">
+                <option value="">请选择科室</option>
+                <option value="办公室">办公室</option>
+                <option value="党建工作科">党建工作科</option>
+                <option value="规划发展科">规划发展科</option>
+                <option value="产权管理科">产权管理科</option>
+                <option value="考核监督科">考核监督科</option>
+                <option value="镇属资产指导管理科">镇属资产指导管理科</option>
+              </select>
             </div>
             <div class="form-group">
               <label>房间号</label>
