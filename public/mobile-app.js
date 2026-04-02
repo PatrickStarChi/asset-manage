@@ -491,7 +491,8 @@ async function mobileConfirmScan(assetId) {
   const token = localStorage.getItem('token');
   
   try {
-    const res = await fetch('/api/transactions', {
+    const endpoint = currentScanType === 'in' ? '/api/transactions/in' : '/api/transactions/out';
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -499,7 +500,6 @@ async function mobileConfirmScan(assetId) {
       },
       body: JSON.stringify({
         asset_id: assetId,
-        type: currentScanType,
         quantity: quantity
       })
     });
