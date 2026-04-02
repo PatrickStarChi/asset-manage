@@ -259,18 +259,11 @@ app.post('/api/transactions', (req, res) => {
 // 领用 API（简化版）
 app.post('/api/transactions/out', (req, res) => {
   req.body.type = 'out';
-  // 调用主处理函数
-  const originalSend = res.send;
-  res.send = function(data) {
-    return originalSend.call(this, data);
-  };
-  // 重新调用
   const { asset_id, quantity, operator, location, remark, asset_name } = req.body;
   req.body.person_name = operator;
   req.body.room_number = location;
   req.body.notes = remark || '领用';
   
-  // 直接处理
   const asset = queryOne('SELECT * FROM assets WHERE id = ?', [asset_id]);
   if (!asset) return res.status(404).json({ error: '资产不存在' });
   
@@ -289,6 +282,74 @@ app.post('/api/transactions/out', (req, res) => {
   
   res.json({ success: true, newQuantity, asset_name: asset.name || asset_name });
   logOperation('TRANSACTION', 'api', `领用资产：${asset.name} x${quantity} (领用人：${operator})`);
+});
+
+// 批量领用 API
+app.post('/api/transactions/batch-out', (req, res) => {
+  const { items, department, room, operator, remark } = req.body;
+  
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: '请选择至少一个物品' });
+  }
+  
+  if (!operator) {
+    return res.status(400).json({ error: '请填写领用人' });
+  }
+  
+  const details = [];
+  const errors = [];
+  
+  // 开启事务（逐个处理，失败回滚）
+  for (const item of items) {
+    try {
+      const { asset_id, quantity, asset_name, unit } = item;
+      
+      const asset = queryOne('SELECT * FROM assets WHERE id = ?', [asset_id]);
+      if (!asset) {
+        errors.push({ asset_name, error: '资产不存在' });
+        continue;
+      }
+      
+      if (asset.quantity < quantity) {
+        errors.push({ asset_name, error: `库存不足（当前：${asset.quantity}）` });
+        continue;
+      }
+      
+      const newQuantity = asset.quantity - quantity;
+      
+      run(`
+        INSERT INTO transactions (asset_id, type, quantity, person_name, room_number, notes)
+        VALUES (?, 'out', ?, ?, ?, ?)
+      `, [asset_id, quantity, operator, department, room || '', remark || '批量领用']);
+      
+      run('UPDATE assets SET quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [newQuantity, asset_id]);
+      
+      details.push({
+        asset_name: asset.name,
+        quantity,
+        unit: unit || asset.unit || '个',
+        oldQuantity: asset.quantity,
+        newQuantity
+      });
+      
+      logOperation('TRANSACTION', 'api', `批量领用：${asset.name} x${quantity} (科室：${department}, 领用人：${operator})`);
+    } catch (error) {
+      errors.push({ asset_name: item.asset_name, error: error.message });
+    }
+  }
+  
+  saveDb();
+  
+  if (errors.length > 0 && details.length === 0) {
+    return res.status(400).json({ success: false, error: '全部领用失败', errors });
+  }
+  
+  res.json({ 
+    success: true, 
+    message: `成功领用 ${details.length} 项物品`,
+    details,
+    errors: errors.length > 0 ? errors : undefined
+  });
 });
 
 // 获取资产二维码
@@ -617,6 +678,74 @@ app.post('/api/import/stock-by-id', (req, res) => {
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(baseDir, 'public', 'index.html'));
+});
+
+// 批量领用页面
+app.get('/batch-checkout', (req, res) => {
+  res.sendFile(path.join(baseDir, 'public', 'batch-checkout.html'));
+});
+
+// 批量领用二维码页面
+app.get('/batch-qr', (req, res) => {
+  const baseUrl = req.protocol + '://' + req.get('host');
+  const batchUrl = `${baseUrl}/batch-checkout`;
+  
+  QRCode.toDataURL(batchUrl, (err, qrCode) => {
+    if (err) return res.status(500).json({ error: '生成二维码失败' });
+    
+    res.send(`
+      <!DOCTYPE html>
+      <html lang="zh-CN">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>批量领用二维码</title>
+        <style>
+          body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+          }
+          .qr-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            text-align: center;
+          }
+          h1 { color: #2c3e50; margin-bottom: 10px; font-size: 24px; }
+          p { color: #7f8c8d; margin-bottom: 20px; font-size: 14px; }
+          img { max-width: 250px; border: 2px solid #e0e0e0; border-radius: 10px; }
+          .btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="qr-card">
+          <h1>📦 批量资产领用</h1>
+          <p>扫码选择多个物品，一键领用</p>
+          <img src="${qrCode}" alt="批量领用二维码">
+          <p style="margin-top:15px;font-size:12px;">${batchUrl}</p>
+          <a href="/batch-checkout" class="btn">🔗 打开领用页面</a>
+        </div>
+      </body>
+      </html>
+    `);
+  });
 });
 
 // 启动服务器

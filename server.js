@@ -45,6 +45,37 @@ app.get('/batch-request', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'batch-request.html'));
 });
 
+// 批量领用页面
+app.get('/batch-checkout', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'batch-checkout.html'));
+});
+
+// 批量领用二维码
+app.get('/api/batch-checkout-qrcode', async (req, res) => {
+  try {
+    const baseUrl = 'https://assetmanage.patrickstar.top';
+    const checkoutUrl = `${baseUrl}/batch-checkout`;
+    
+    const qrCodeImage = await QRCode.toDataURL(checkoutUrl, {
+      width: 400,
+      margin: 3,
+      color: {
+        dark: '#000000',
+        light: '#ffffff'
+      }
+    });
+    
+    res.json({ 
+      qrCode: qrCodeImage, 
+      url: checkoutUrl,
+      title: '批量资产领用',
+      description: '扫描二维码进入批量领用表单'
+    });
+  } catch (err) {
+    res.status(500).json({ error: '二维码生成失败' });
+  }
+});
+
 // 生成批量领用表单二维码
 app.get('/api/batch-request-qrcode', async (req, res) => {
   try {
@@ -334,6 +365,94 @@ app.post('/api/transactions/in', (req, res) => {
   });
 });
 
+// 批量出库
+app.post('/api/transactions/batch-out', (req, res) => {
+  const { items, department, room_number, notes } = req.body;
+  
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    res.status(400).json({ error: '请至少选择一个物品' });
+    return;
+  }
+  
+  const results = [];
+  
+  db.run('BEGIN TRANSACTION');
+  
+  const processItem = (index) => {
+    if (index >= items.length) {
+      db.run('COMMIT');
+      res.json({ success: true, results });
+      return;
+    }
+    
+    const item = items[index];
+    const { asset_id, quantity } = item;
+    
+    if (!asset_id || !quantity || quantity <= 0) {
+      results.push({ ...item, status: 'error', message: '无效的物品或数量' });
+      processItem(index + 1);
+      return;
+    }
+    
+    db.get('SELECT * FROM assets WHERE id = ?', [asset_id], (err, asset) => {
+      if (err || !asset) {
+        results.push({ ...item, status: 'error', message: '资产不存在' });
+        processItem(index + 1);
+        return;
+      }
+      
+      if (asset.quantity < quantity) {
+        results.push({ 
+          ...item, 
+          status: 'error', 
+          message: `库存不足（当前：${asset.quantity} ${asset.unit}）` 
+        });
+        processItem(index + 1);
+        return;
+      }
+      
+      const newQuantity = asset.quantity - quantity;
+      
+      db.run(
+        `UPDATE assets SET quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        [newQuantity, asset_id],
+        function(err) {
+          if (err) {
+            db.run('ROLLBACK');
+            results.push({ ...item, status: 'error', message: err.message });
+            res.status(500).json({ success: false, error: '批量出库失败', results });
+            return;
+          }
+          
+          db.run(
+            `INSERT INTO transactions (asset_id, asset_name, type, quantity, person_name, room_number, notes) VALUES (?, ?, 'out', ?, ?, ?, ?)`,
+            [asset_id, asset.name, quantity, department || '批量领用', room_number || '', notes || ''],
+            function(err) {
+              if (err) {
+                db.run('ROLLBACK');
+                results.push({ ...item, status: 'error', message: err.message });
+                res.status(500).json({ success: false, error: '批量出库失败', results });
+                return;
+              }
+              
+              results.push({ 
+                asset_id, 
+                asset_name: asset.name, 
+                quantity, 
+                unit: asset.unit,
+                status: 'success' 
+              });
+              processItem(index + 1);
+            }
+          );
+        }
+      );
+    });
+  };
+  
+  processItem(0);
+});
+
 // 出库
 app.post('/api/transactions/out', (req, res) => {
   const { asset_id, quantity, person_name, room_number, location, notes } = req.body;
@@ -431,8 +550,8 @@ app.outHandler = (req, res) => {
 };
 
 // 批量出库（表单领用）
-app.post('/api/transactions/batch-out', authMiddleware, async (req, res) => {
-  const { items, department, location, notes } = req.body;
+app.post('/api/transactions/batch-out', async (req, res) => {
+  const { items, department, room_number, remark } = req.body;
   
   if (!items || !Array.isArray(items) || items.length === 0) {
     res.status(400).json({ error: '请选择至少一个物品' });
@@ -483,9 +602,9 @@ app.post('/api/transactions/batch-out', authMiddleware, async (req, res) => {
       // 记录出库
       await new Promise((resolve, reject) => {
         db.run(
-          `INSERT INTO transactions (asset_id, asset_name, type, quantity, person_name, room_number, location, notes) 
-           VALUES (?, ?, 'out', ?, ?, ?, ?, ?)`,
-          [asset_id, asset.name, quantity, req.user.username, department, location || '', notes || '批量领用'],
+          `INSERT INTO transactions (asset_id, asset_name, type, quantity, person_name, room_number, notes) 
+           VALUES (?, ?, 'out', ?, ?, ?, ?)`,
+          [asset_id, asset.name, quantity, '批量领用', department, room_number || '', remark || '批量领用'],
           (err) => { if (err) reject(err); else resolve(); }
         );
       });
