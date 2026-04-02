@@ -286,6 +286,9 @@ tail -f logs/operations.log
 
 查看完整的版本更新记录：[CHANGELOG.md](CHANGELOG.md)
 
+### v1.11 (2026-04-02)
+- ✅ 添加"办公用品"分类
+
 ### v1.10 (2026-04-02) - 正式版
 - ✅ 批量领取二维码功能
 - ✅ 每 30 分钟自动备份
@@ -332,6 +335,6 @@ MIT License
 
 感谢使用本系统！如有问题请提交 [Issue](https://github.com/PatrickStarChi/asset-manage/issues)。
 
-**版本**: v1.10  
+**版本**: v1.11  
 **最后更新**: 2026-04-02 18:00 CST  
 **维护人员**: 司礼监
