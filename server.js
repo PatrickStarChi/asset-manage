@@ -434,7 +434,7 @@ app.get('/api/export/transactions', authMiddleware, async (req, res) => {
       ? 'SELECT * FROM transactions WHERE type = "in" ORDER BY created_at DESC'
       : 'SELECT * FROM transactions WHERE type = "out" ORDER BY created_at DESC';
     
-    db.all(query, (err, rows) => {
+    db.all(query, async (err, rows) => {
       if (err) {
         res.status(500).json({ error: '导出失败' });
         return;
