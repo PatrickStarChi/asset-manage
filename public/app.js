@@ -1397,15 +1397,29 @@ async function handleScan() {
   try {
     // 尝试通过二维码或 ID 查找资产
     let asset;
+    let assetId = null;
     
-    // 如果是数字，当作 ID
+    // 1. 如果是纯数字，当作 ID
     if (/^\d+$/.test(qrCode)) {
-      const res = await fetch(`/api/assets/${qrCode}`);
+      assetId = qrCode;
+    }
+    // 2. 如果是 URL，尝试提取 ID（如 https://xxx.com/asset/123）
+    else if (qrCode.includes('/asset/')) {
+      const match = qrCode.match(/\/asset\/(\d+)/);
+      if (match && match[1]) {
+        assetId = match[1];
+      }
+    }
+    
+    // 3. 通过 ID 获取资产
+    if (assetId) {
+      const res = await fetch(`/api/assets/${assetId}`);
       if (res.ok) {
         asset = await res.json();
       }
-    } else {
-      // 否则尝试通过二维码查找
+    }
+    // 4. 否则尝试通过 qr_code 字段匹配
+    if (!asset) {
       const assetsRes = await fetch('/api/assets');
       const assets = await assetsRes.json();
       asset = assets.find(a => a.qr_code === qrCode);
