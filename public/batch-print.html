@@ -171,6 +171,7 @@
       height: 70px;
       object-fit: contain;
       margin-bottom: 8px;
+      display: block;
     }
 
     .qr-card .asset-name {
@@ -357,12 +358,21 @@
       const layout = document.getElementById('layout-select').value;
       const assetsToPrint = allAssets.filter(a => selectedAssets.has(a.id));
       
+      console.log('开始生成打印:', assetsToPrint.length, '个资产');
+      
       const container = document.getElementById('print-container');
+      container.innerHTML = '<div style="padding:20px;text-align:center;">正在生成二维码，请稍候...</div>';
+      container.classList.add('active');
+      container.scrollIntoView({ behavior: 'smooth' });
+
+      // 清空并重新生成
       container.innerHTML = '';
 
       // 分页
       const perPage = parseInt(layout);
       const pages = Math.ceil(assetsToPrint.length / perPage);
+      
+      console.log('共', pages, '页');
 
       for (let p = 0; p < pages; p++) {
         const pageAssets = assetsToPrint.slice(p * perPage, (p + 1) * perPage);
@@ -371,6 +381,8 @@
         
         const gridDiv = document.createElement('div');
         gridDiv.className = layout === '8' ? 'layout-8' : 'layout-10';
+        
+        console.log('生成第', p + 1, '页，', pageAssets.length, '个资产');
         
         for (const asset of pageAssets) {
           const cardDiv = await createQRCard(asset);
@@ -381,17 +393,17 @@
         container.appendChild(pageDiv);
       }
 
-      container.classList.add('active');
+      console.log('生成完成');
       
-      // 滚动到打印区域
-      container.scrollIntoView({ behavior: 'smooth' });
-      
-      // 自动打开打印对话框
+      // 等待图片加载完成
       setTimeout(() => {
+        const images = container.querySelectorAll('img');
+        console.log('等待', images.length, '个图片加载');
+        
         if (confirm('已生成打印预览，是否立即打印？')) {
           window.print();
         }
-      }, 500);
+      }, 1000);
     }
 
     // 创建二维码卡片
@@ -404,13 +416,15 @@
       const assetUrl = `${baseUrl}/asset/${asset.id}`;
       
       try {
-        console.log('正在生成资产二维码:', asset.name, asset.id);
+        console.log('[QR] 正在生成:', asset.name, 'ID:', asset.id);
         
         // 检查 QRCode 库
         if (typeof QRCode === 'undefined') {
+          console.error('[QR] QRCode 库未定义');
           throw new Error('QRCode 库未加载');
         }
         
+        // 生成二维码
         const qrCode = await QRCode.toDataURL(assetUrl, {
           width: 200,
           margin: 1,
@@ -421,24 +435,32 @@
           }
         });
         
-        console.log('二维码生成成功:', asset.name);
+        console.log('[QR] 生成成功:', asset.name, '长度:', qrCode.length);
+        
+        // 创建图片并等待加载
+        const img = new Image();
+        img.src = qrCode;
+        img.width = 70;
+        img.height = 70;
+        img.alt = 'QR Code';
         
         card.innerHTML = `
-          <img src="${qrCode}" alt="QR Code">
           <div class="asset-name">${asset.name}</div>
           <div class="asset-info">${asset.category} | 库存：${asset.quantity}</div>
         `;
+        card.appendChild(img);
+        
+        return card;
       } catch (err) {
-        console.error('二维码生成失败:', asset.name, err);
+        console.error('[QR] 生成失败:', asset.name, err.message);
         card.innerHTML = `
           <div style="color: red; font-size: 10px; text-align: center;">
             ❌ 生成失败<br>${err.message}
           </div>
           <div class="asset-name">${asset.name}</div>
         `;
+        return card;
       }
-      
-      return card;
     }
 
     // 测试二维码生成
