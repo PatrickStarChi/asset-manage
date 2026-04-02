@@ -157,7 +157,7 @@
     /* 二维码卡片 */
     .qr-card {
       border: 1px dashed #999;
-      padding: 6px;
+      padding: 8px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -167,15 +167,15 @@
     }
 
     .qr-card img {
-      width: 50px;
-      height: 50px;
+      width: 80px;
+      height: 80px;
       object-fit: contain;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
       display: block;
     }
 
     .qr-card .asset-name {
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 600;
       text-align: center;
       color: #000;
@@ -240,8 +240,8 @@
     <div>
       <label>每页打印数量：</label>
       <select id="layout-select">
-        <option value="12">12 张/页 (3×4) - 二维码 50px</option>
-        <option value="14">14 张/页 (2×7) - 二维码 50px</option>
+        <option value="12">12 张/页 (3×4) - 二维码 80px</option>
+        <option value="14">14 张/页 (2×7) - 二维码 80px</option>
       </select>
     </div>
 
@@ -405,10 +405,10 @@
         // 创建图片
         const img = new Image();
         img.src = data.qrCode;
-        img.width = 50;
-        img.height = 50;
+        img.width = 80;
+        img.height = 80;
         img.alt = 'QR Code';
-        img.style.marginBottom = '6px';
+        img.style.marginBottom = '8px';
         
         card.innerHTML = `
           <div class="asset-name">${asset.name}</div>
