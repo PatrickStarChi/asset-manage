@@ -551,7 +551,7 @@ app.outHandler = (req, res) => {
 
 // 批量出库（表单领用）
 app.post('/api/transactions/batch-out', async (req, res) => {
-  const { items, department, room_number, remark } = req.body;
+  const { items, department, person_name, location, notes } = req.body;
   
   if (!items || !Array.isArray(items) || items.length === 0) {
     res.status(400).json({ error: '请选择至少一个物品' });
@@ -602,9 +602,9 @@ app.post('/api/transactions/batch-out', async (req, res) => {
       // 记录出库
       await new Promise((resolve, reject) => {
         db.run(
-          `INSERT INTO transactions (asset_id, asset_name, type, quantity, person_name, room_number, notes) 
-           VALUES (?, ?, 'out', ?, ?, ?, ?)`,
-          [asset_id, asset.name, quantity, '批量领用', department, room_number || '', remark || '批量领用'],
+          `INSERT INTO transactions (asset_id, asset_name, type, quantity, person_name, room_number, location, notes) 
+           VALUES (?, ?, 'out', ?, ?, ?, ?, ?)`,
+          [asset_id, asset.name, quantity, person_name || req.user?.username || '批量领用', department, location || '', notes || '批量领用'],
           (err) => { if (err) reject(err); else resolve(); }
         );
       });

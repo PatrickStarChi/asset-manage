@@ -281,6 +281,11 @@
       </div>
 
       <div class="form-group">
+        <label>领用人</label>
+        <input type="text" id="person_name" class="form-input" placeholder="默认当前用户">
+      </div>
+
+      <div class="form-group">
         <label>房间号</label>
         <input type="text" id="location" class="form-input" placeholder="例如：301、A202">
       </div>
@@ -453,6 +458,7 @@
         return;
       }
 
+      const person_name = document.getElementById('person_name').value;
       const location = document.getElementById('location').value;
       const notes = document.getElementById('notes').value;
 
@@ -464,6 +470,7 @@
       const data = {
         items: items,
         department: department,
+        person_name: person_name || null,
         location: location,
         notes: notes
       };
