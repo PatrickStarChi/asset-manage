@@ -975,6 +975,12 @@ async function openStockIn(id) {
     document.getElementById('stock-in-name').value = asset.name;
     document.getElementById('stock-in-current').value = `${asset.quantity} ${asset.unit}`;
     
+    // 填充最低库存量
+    const minStockInput = document.getElementById('stock-in-min-stock');
+    if (minStockInput && asset.min_quantity !== undefined) {
+      minStockInput.value = asset.min_quantity;
+    }
+    
     navigateTo('page-stock-in');
   } catch (err) {
     console.error('加载资产信息失败:', err);
@@ -988,6 +994,9 @@ async function handleStockIn(e) {
   
   const assetId = document.getElementById('stock-in-asset-id').value;
   const formData = new FormData(e.target);
+  const minQuantityInput = document.getElementById('stock-in-min-stock');
+  const minQuantity = minQuantityInput && minQuantityInput.value !== '' ? parseInt(minQuantityInput.value) : null;
+  
   const data = {
     asset_id: parseInt(assetId),
     quantity: parseInt(formData.get('quantity')),
@@ -998,6 +1007,7 @@ async function handleStockIn(e) {
   const token = localStorage.getItem('token');
   
   try {
+    // 1. 先执行入库
     const res = await fetch('/api/transactions/in', {
       method: 'POST',
       headers: {
@@ -1007,14 +1017,26 @@ async function handleStockIn(e) {
       body: JSON.stringify(data)
     });
     
-    if (res.ok) {
-      alert('✅ 入库成功');
-      navigateTo('assets');
-      loadAssets();
-    } else {
+    if (!res.ok) {
       const error = await res.json();
       throw new Error(error.error || '入库失败');
     }
+    
+    // 2. 如果填写了最低库存量，则更新
+    if (minQuantity !== null) {
+      await fetch(`/api/assets/${assetId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ min_quantity: minQuantity })
+      });
+    }
+    
+    alert('✅ 入库成功');
+    navigateTo('assets');
+    loadAssets();
   } catch (err) {
     console.error('入库失败:', err);
     alert(err.message);
@@ -1249,7 +1271,8 @@ async function handleAddAsset(e) {
     category: form.category.value,
     quantity: parseInt(form.quantity.value) || 0,
     unit: form.unit.value,
-    location: form.location.value
+    location: form.location.value,
+    min_quantity: form.min_quantity.value !== '' ? parseInt(form.min_quantity.value) : 0
   };
   
   try {

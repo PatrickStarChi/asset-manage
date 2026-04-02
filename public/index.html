@@ -376,6 +376,10 @@
               <input type="number" name="quantity" required min="1" class="form-input">
             </div>
             <div class="form-group">
+              <label>最低库存量</label>
+              <input type="number" id="stock-in-min-stock" name="min_quantity" min="0" class="form-input" placeholder="可选，默认 0">
+            </div>
+            <div class="form-group">
               <label>备注</label>
               <textarea name="remark" class="form-textarea"></textarea>
             </div>
@@ -551,6 +555,10 @@
         <div class="form-group">
           <label>存放位置</label>
           <input type="text" name="location" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>最低库存量</label>
+          <input type="number" name="min_quantity" value="0" min="0" class="form-input" placeholder="可选，默认 0">
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" onclick="closeModal('addAssetModal')">取消</button>
