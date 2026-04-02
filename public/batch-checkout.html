@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>批量资产领用</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    h1 { 
+      color: #2c3e50; 
+      margin-bottom: 10px;
+      text-align: center;
+      font-size: 24px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #7f8c8d;
+      margin-bottom: 25px;
+      font-size: 14px;
+    }
+    .form-section {
+      margin-bottom: 25px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 10px;
+    }
+    .form-section h3 {
+      color: #2c3e50;
+      margin-bottom: 15px;
+      font-size: 16px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #2c3e50;
+      font-weight: 500;
+      font-size: 14px;
+    }
+    .form-input, .form-select {
+      width: 100%;
+      padding: 12px 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 15px;
+      transition: border-color 0.3s;
+    }
+    .form-input:focus, .form-select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    .item-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .item-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      background: white;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    .item-row input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+    }
+    .item-row .item-name {
+      flex: 1;
+      font-size: 14px;
+      color: #2c3e50;
+    }
+    .item-row .item-stock {
+      font-size: 12px;
+      color: #7f8c8d;
+      margin-right: 10px;
+    }
+    .item-row input[type="number"] {
+      width: 80px;
+      padding: 8px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-secondary {
+      background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+    }
+    .success, .error {
+      text-align: center;
+      padding: 30px;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+    .success {
+      background: #d4edda;
+      color: #155724;
+    }
+    .error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .selected-count {
+      text-align: right;
+      font-size: 13px;
+      color: #667eea;
+      margin-top: 10px;
+    }
+    #add-item-btn {
+      margin-top: 10px;
+      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="content">
+      <h1>📦 批量资产领用</h1>
+      <p class="subtitle">选择多个物品，一键领用</p>
+      
+      <form id="batch-checkout-form" onsubmit="handleBatchCheckout(event)">
+        <!-- 物品选择区域 -->
+        <div class="form-section">
+          <h3>📋 选择物品</h3>
+          <div class="item-list" id="item-list">
+            <!-- 动态加载物品列表 -->
+          </div>
+          <div class="selected-count">已选：<span id="selected-count">0</span> 项</div>
+          <button type="button" id="add-item-btn" class="btn btn-secondary" onclick="loadItems()" style="margin-top:10px;">🔄 刷新列表</button>
+        </div>
+        
+        <!-- 领用信息区域 -->
+        <div class="form-section">
+          <h3>👤 领用信息</h3>
+          <div class="form-group">
+            <label>科室 <span style="color:#e74c3c;">*</span></label>
+            <input type="text" name="department" class="form-input" required placeholder="例如：办公室">
+          </div>
+          <div class="form-group">
+            <label>房间号</label>
+            <input type="text" name="room" class="form-input" placeholder="例如：A-101">
+          </div>
+          <div class="form-group">
+            <label>领用人 <span style="color:#e74c3c;">*</span></label>
+            <input type="text" name="operator" class="form-input" required placeholder="姓名">
+          </div>
+          <div class="form-group">
+            <label>备注</label>
+            <textarea name="remark" class="form-input" placeholder="备注信息..." rows="2"></textarea>
+          </div>
+        </div>
+        
+        <button type="submit" class="btn">✅ 确认领用</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let allAssets = [];
+    
+    // 加载物品列表
+    async function loadItems() {
+      try {
+        const res = await fetch('/api/assets');
+        allAssets = await res.json();
+        
+        const itemList = document.getElementById('item-list');
+        if (allAssets.length === 0) {
+          itemList.innerHTML = '<p style="text-align:center;color:#7f8c8d;padding:20px;">暂无物品</p>';
+          return;
+        }
+        
+        itemList.innerHTML = allAssets.map((asset, index) => `
+          <div class="item-row">
+            <input type="checkbox" id="item-${index}" data-id="${asset.id}" data-name="${asset.name}" data-stock="${asset.quantity}" data-unit="${asset.unit||'个'}" onchange="updateSelectedCount()">
+            <label for="item-${index}" class="item-name">${asset.name}</label>
+            <span class="item-stock">库存：${asset.quantity}</span>
+            <input type="number" min="1" max="${asset.quantity}" value="1" placeholder="数量" id="qty-${index}" disabled>
+          </div>
+        `).join('');
+        
+        // 绑定数量输入框的启用/禁用
+        document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+          cb.addEventListener('change', function() {
+            const index = this.id.replace('item-', '');
+            const qtyInput = document.getElementById(`qty-${index}`);
+            qtyInput.disabled = !this.checked;
+            if (this.checked) {
+              qtyInput.focus();
+            }
+          });
+        });
+        
+      } catch (err) {
+        console.error('加载物品列表失败:', err);
+        document.getElementById('item-list').innerHTML = '<p style="color:#e74c3c;text-align:center;">加载失败</p>';
+      }
+    }
+    
+    // 更新已选数量
+    function updateSelectedCount() {
+      const count = document.querySelectorAll('input[type="checkbox"]:checked').length;
+      document.getElementById('selected-count').textContent = count;
+    }
+    
+    // 处理批量领用
+    async function handleBatchCheckout(e) {
+      e.preventDefault();
+      const form = e.target;
+      const submitBtn = form.querySelector('.btn[type="submit"]');
+      
+      submitBtn.disabled = true;
+      submitBtn.textContent = '处理中...';
+      
+      // 获取选中的物品
+      const items = [];
+      document.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+        const index = cb.id.replace('item-', '');
+        const qtyInput = document.getElementById(`qty-${index}`);
+        items.push({
+          asset_id: cb.dataset.id,
+          asset_name: cb.dataset.name,
+          quantity: parseInt(qtyInput.value) || 1,
+          unit: cb.dataset.unit
+        });
+      });
+      
+      if (items.length === 0) {
+        alert('请至少选择一个物品');
+        submitBtn.disabled = false;
+        submitBtn.textContent = '✅ 确认领用';
+        return;
+      }
+      
+      // 验证库存
+      for (const item of items) {
+        const asset = allAssets.find(a => a.id === item.asset_id);
+        if (asset && item.quantity > asset.quantity) {
+          alert(`${item.asset_name} 库存不足（当前：${asset.quantity}）`);
+          submitBtn.disabled = false;
+          submitBtn.textContent = '✅ 确认领用';
+          return;
+        }
+      }
+      
+      const data = {
+        items,
+        department: form.department.value,
+        room: form.room.value || '',
+        operator: form.operator.value,
+        remark: form.remark.value || '批量领用'
+      };
+      
+      try {
+        const res = await fetch('/api/transactions/batch-out', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await res.json();
+        
+        if (res.ok && result.success) {
+          let itemsHtml = result.details.map(d => 
+            `<div>✅ ${d.asset_name}: ${d.quantity} ${d.unit||'个'}</div>`
+          ).join('');
+          
+          document.getElementById('content').innerHTML = `
+            <div class="success">
+              <h3>✅ 领用成功！</h3>
+              <div style="margin:20px 0;text-align:left;">
+                ${itemsHtml}
+              </div>
+              <p><strong>科室：</strong>${data.department}</p>
+              <p><strong>房间号：</strong>${data.room || '未填写'}</p>
+              <p><strong>领用人：</strong>${data.operator}</p>
+              <p style="margin-top:15px;font-size:13px;color:#7f8c8d;">
+                ${new Date().toLocaleString('zh-CN')}
+              </p>
+            </div>
+            <a href="/" class="btn" style="margin-top:20px;">返回首页</a>
+            <a href="/batch-checkout" class="btn btn-secondary" style="display:block;text-align:center;text-decoration:none;margin-top:10px;">继续领用</a>
+          `;
+        } else {
+          throw new Error(result.error || '领用失败');
+        }
+      } catch (err) {
+        document.getElementById('content').innerHTML = `
+          <div class="error">
+            <h3>❌ 领用失败</h3>
+            <p>${err.message}</p>
+            <button onclick="location.reload()" class="btn" style="margin-top:15px;">重试</button>
+            <a href="/" class="btn btn-secondary" style="display:block;text-align:center;text-decoration:none;margin-top:10px;">返回首页</a>
+          </div>
+        `;
+      }
+    }
+    
+    // 页面加载时获取物品列表
+    loadItems();
+  </script>
+</body>
+</html>

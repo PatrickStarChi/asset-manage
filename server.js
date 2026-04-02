@@ -40,6 +40,37 @@ app.get('/batch-print', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'batch-print.html'));
 });
 
+// 批量领用表单页面路由
+app.get('/batch-request', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'batch-request.html'));
+});
+
+// 生成批量领用表单二维码
+app.get('/api/batch-request-qrcode', async (req, res) => {
+  try {
+    const baseUrl = 'https://assetmanage.patrickstar.top';
+    const requestUrl = `${baseUrl}/batch-request`;
+    
+    const qrCodeImage = await QRCode.toDataURL(requestUrl, {
+      width: 300,
+      margin: 2,
+      errorCorrectionLevel: 'M',
+      color: {
+        dark: '#000000',
+        light: '#ffffff'
+      }
+    });
+    
+    res.json({ 
+      qrCode: qrCodeImage, 
+      url: requestUrl,
+      title: '批量领用申请'
+    });
+  } catch (err) {
+    res.status(500).json({ error: '二维码生成失败：' + err.message });
+  }
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // 认证中间件
@@ -398,6 +429,76 @@ app.post('/api/scan-out', (req, res) => {
 app.outHandler = (req, res) => {
   app.post('/api/transactions/out')(req, res);
 };
+
+// 批量出库（表单领用）
+app.post('/api/transactions/batch-out', authMiddleware, async (req, res) => {
+  const { items, department, location, notes } = req.body;
+  
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    res.status(400).json({ error: '请选择至少一个物品' });
+    return;
+  }
+  
+  if (!department) {
+    res.status(400).json({ error: '请选择领用科室' });
+    return;
+  }
+  
+  try {
+    db.run('BEGIN TRANSACTION');
+    
+    for (const item of items) {
+      const { asset_id, quantity } = item;
+      
+      // 检查资产
+      const asset = await new Promise((resolve, reject) => {
+        db.get('SELECT * FROM assets WHERE id = ?', [asset_id], (err, row) => {
+          if (err) reject(err);
+          else resolve(row);
+        });
+      });
+      
+      if (!asset) {
+        db.run('ROLLBACK');
+        res.status(404).json({ error: `资产 ${asset_id} 不存在` });
+        return;
+      }
+      
+      if (asset.quantity < quantity) {
+        db.run('ROLLBACK');
+        res.status(400).json({ error: `${asset.name} 库存不足（当前：${asset.quantity}）` });
+        return;
+      }
+      
+      // 更新库存
+      const newQuantity = asset.quantity - quantity;
+      await new Promise((resolve, reject) => {
+        db.run(
+          'UPDATE assets SET quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+          [newQuantity, asset_id],
+          (err) => { if (err) reject(err); else resolve(); }
+        );
+      });
+      
+      // 记录出库
+      await new Promise((resolve, reject) => {
+        db.run(
+          `INSERT INTO transactions (asset_id, asset_name, type, quantity, person_name, room_number, location, notes) 
+           VALUES (?, ?, 'out', ?, ?, ?, ?, ?)`,
+          [asset_id, asset.name, quantity, req.user.username, department, location || '', notes || '批量领用'],
+          (err) => { if (err) reject(err); else resolve(); }
+        );
+      });
+    }
+    
+    db.run('COMMIT');
+    res.json({ success: true, message: `成功出库 ${items.length} 个物品` });
+  } catch (err) {
+    db.run('ROLLBACK');
+    console.error('批量出库失败:', err);
+    res.status(500).json({ error: '批量出库失败：' + err.message });
+  }
+});
 
 // 导出出入库记录 Excel
 app.get('/api/export/transactions', authMiddleware, async (req, res) => {

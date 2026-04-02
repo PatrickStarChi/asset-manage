@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>资产批量领用申请</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif;
+      background: #f5f7fa;
+      padding: 20px;
+      padding-bottom: 100px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 20px;
+      margin-bottom: 5px;
+    }
+
+    .header p {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 15px;
+      color: #1f2937;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #4b5563;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .form-select,
+    .form-input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.2s;
+    }
+
+    .form-select:focus,
+    .form-input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .asset-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .asset-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: #f9fafb;
+      border-radius: 8px;
+      border: 2px solid #e5e7eb;
+    }
+
+    .asset-item.selected {
+      border-color: #667eea;
+      background: #f0f4ff;
+    }
+
+    .asset-checkbox {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+
+    .asset-info {
+      flex: 1;
+    }
+
+    .asset-name {
+      font-weight: 600;
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+
+    .asset-meta {
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    .asset-quantity {
+      width: 100px;
+    }
+
+    .asset-quantity input {
+      width: 100%;
+      padding: 8px;
+      border: 2px solid #e5e7eb;
+      border-radius: 6px;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .asset-quantity input:disabled {
+      background: #e5e7eb;
+      cursor: not-allowed;
+    }
+
+    .search-bar {
+      margin-bottom: 15px;
+    }
+
+    .search-bar input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    .submit-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #fff;
+      padding: 15px 20px;
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 14px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+    }
+
+    .btn-primary:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .selected-count {
+      background: #667eea;
+      color: #fff;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      margin-left: 10px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #9ca3af;
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    .alert {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-size: 14px;
+    }
+
+    .alert-error {
+      background: #fee2e2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    }
+
+    .alert-success {
+      background: #d1fae5;
+      color: #059669;
+      border: 1px solid #a7f3d0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📦 资产批量领用申请</h1>
+      <p>请选择需要领用的物品并填写数量</p>
+    </div>
+
+    <div id="alert-container"></div>
+
+    <div class="card">
+      <h3 class="card-title">📋 选择物品</h3>
+      
+      <div class="search-bar">
+        <input type="text" id="search-input" placeholder="搜索物品名称或分类..." oninput="filterAssets()">
+      </div>
+
+      <div class="asset-list" id="asset-list">
+        <div class="empty-state">
+          <div class="empty-state-icon">⏳</div>
+          <div>加载中...</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 class="card-title">📝 领用信息</h3>
+      
+      <div class="form-group">
+        <label>领用科室 *</label>
+        <select id="department" class="form-select" required>
+          <option value="">请选择科室</option>
+          <option value="办公室">办公室</option>
+          <option value="党建工作科">党建工作科</option>
+          <option value="规划发展科">规划发展科</option>
+          <option value="产权管理科">产权管理科</option>
+          <option value="考核监督科">考核监督科</option>
+          <option value="镇属资产指导管理科">镇属资产指导管理科</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>房间号</label>
+        <input type="text" id="location" class="form-input" placeholder="例如：301、A202">
+      </div>
+
+      <div class="form-group">
+        <label>备注</label>
+        <textarea id="notes" class="form-input" rows="3" placeholder="其他说明信息"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="submit-bar">
+    <button class="btn btn-secondary" onclick="resetForm()">重置</button>
+    <button class="btn btn-primary" onclick="submitForm()" id="submit-btn" disabled>
+      提交申请 <span id="selected-count" class="selected-count">0 项</span>
+    </button>
+  </div>
+
+  <script>
+    let allAssets = [];
+    let selectedAssets = new Map();
+
+    // 加载资产列表
+    async function loadAssets() {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/assets', {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        allAssets = await res.json();
+        renderAssetList(allAssets);
+      } catch (err) {
+        showAlert('加载资产失败：' + err.message, 'error');
+      }
+    }
+
+    // 渲染资产列表
+    function renderAssetList(assets) {
+      const container = document.getElementById('asset-list');
+      
+      if (assets.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📦</div>
+            <div>暂无资产</div>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = assets.map(asset => {
+        const isSelected = selectedAssets.has(asset.id);
+        const quantity = selectedAssets.get(asset.id) || 1;
+        
+        return `
+          <div class="asset-item ${isSelected ? 'selected' : ''}" onclick="toggleAsset(${asset.id})">
+            <input type="checkbox" class="asset-checkbox" 
+                   id="asset-${asset.id}" 
+                   ${isSelected ? 'checked' : ''}
+                   onclick="event.stopPropagation(); toggleAsset(${asset.id})">
+            <div class="asset-info">
+              <div class="asset-name">${asset.name}</div>
+              <div class="asset-meta">${asset.category} | 库存：${asset.quantity} ${asset.unit || '个'}</div>
+            </div>
+            <div class="asset-quantity">
+              <input type="number" 
+                     id="quantity-${asset.id}"
+                     value="${quantity}" 
+                     min="1" 
+                     max="${asset.quantity}"
+                     ${!isSelected ? 'disabled' : ''}
+                     onclick="event.stopPropagation()"
+                     onchange="updateQuantity(${asset.id}, this.value)">
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      updateSubmitButton();
+    }
+
+    // 筛选资产
+    function filterAssets() {
+      const query = document.getElementById('search-input').value.toLowerCase();
+      
+      if (!query) {
+        renderAssetList(allAssets);
+        return;
+      }
+
+      const filtered = allAssets.filter(asset => 
+        asset.name.toLowerCase().includes(query) ||
+        asset.category.toLowerCase().includes(query)
+      );
+
+      renderAssetList(filtered);
+    }
+
+    // 切换选择
+    function toggleAsset(id) {
+      if (selectedAssets.has(id)) {
+        selectedAssets.delete(id);
+      } else {
+        const asset = allAssets.find(a => a.id === id);
+        if (asset && asset.quantity > 0) {
+          selectedAssets.set(id, 1);
+        } else {
+          showAlert(`${asset.name} 库存不足`, 'error');
+          return;
+        }
+      }
+      
+      renderAssetList(allAssets.filter(a => 
+        selectedAssets.has(a.id) || 
+        a.name.toLowerCase().includes(document.getElementById('search-input').value.toLowerCase())
+      ));
+    }
+
+    // 更新数量
+    function updateQuantity(id, value) {
+      const asset = allAssets.find(a => a.id === id);
+      const qty = parseInt(value);
+      
+      if (qty < 1) {
+        showAlert('数量必须大于 0', 'error');
+        renderAssetList(allAssets);
+        return;
+      }
+      
+      if (qty > asset.quantity) {
+        showAlert(`${asset.name} 库存不足（最大：${asset.quantity}）`, 'error');
+        renderAssetList(allAssets);
+        return;
+      }
+      
+      selectedAssets.set(id, qty);
+      updateSubmitButton();
+    }
+
+    // 更新提交按钮
+    function updateSubmitButton() {
+      const count = selectedAssets.size;
+      const btn = document.getElementById('submit-btn');
+      const countLabel = document.getElementById('selected-count');
+      
+      countLabel.textContent = `${count} 项`;
+      btn.disabled = count === 0;
+    }
+
+    // 重置表单
+    function resetForm() {
+      selectedAssets.clear();
+      document.getElementById('department').value = '';
+      document.getElementById('location').value = '';
+      document.getElementById('notes').value = '';
+      document.getElementById('search-input').value = '';
+      renderAssetList(allAssets);
+    }
+
+    // 提交表单
+    async function submitForm() {
+      if (selectedAssets.size === 0) {
+        showAlert('请至少选择一个物品', 'error');
+        return;
+      }
+
+      const department = document.getElementById('department').value;
+      if (!department) {
+        showAlert('请选择领用科室', 'error');
+        return;
+      }
+
+      const location = document.getElementById('location').value;
+      const notes = document.getElementById('notes').value;
+
+      const items = Array.from(selectedAssets.entries()).map(([id, quantity]) => ({
+        asset_id: id,
+        quantity: quantity
+      }));
+
+      const data = {
+        items: items,
+        department: department,
+        location: location,
+        notes: notes
+      };
+
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/transactions/batch-out', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(data)
+        });
+
+        const result = await res.json();
+
+        if (res.ok) {
+          showAlert('✅ 领用申请提交成功！', 'success');
+          setTimeout(() => {
+            window.close(); // 如果是弹窗打开的，关闭窗口
+            // 或者跳转到成功页面
+          }, 2000);
+        } else {
+          showAlert('❌ ' + (result.error || '提交失败'), 'error');
+        }
+      } catch (err) {
+        showAlert('网络错误：' + err.message, 'error');
+      }
+    }
+
+    // 显示提示
+    function showAlert(message, type) {
+      const container = document.getElementById('alert-container');
+      container.innerHTML = `
+        <div class="alert alert-${type}">${message}</div>
+      `;
+      setTimeout(() => {
+        container.innerHTML = '';
+      }, 5000);
+    }
+
+    // 初始化
+    loadAssets();
+  </script>
+</body>
+</html>

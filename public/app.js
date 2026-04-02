@@ -246,6 +246,8 @@ function navigateTo(pageId) {
   else if (pageId === 'transactions-out') loadOutTransactions();
   else if (pageId === 'scan') initScanPage();
   else if (pageId === 'users') loadUsers();
+  else if (pageId === 'form-claim') openFormClaim();
+  else if (pageId === 'page-batch-request-qr') loadBatchRequestQRCode();
 }
 
 // 页面加载完成 - 先检查登录状态
@@ -818,6 +820,50 @@ async function openAssetDetail(id) {
     console.error('加载资产详情失败:', err);
     alert('加载失败');
   }
+}
+
+// 加载批量领用表单二维码
+async function loadBatchRequestQRCode() {
+  try {
+    const res = await fetch('/api/batch-request-qrcode');
+    const data = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(data.error || '加载失败');
+    }
+    
+    document.getElementById('batch-request-qrcode').innerHTML = `
+      <img src="${data.qrCode}" alt="批量领用表单二维码" style="max-width:300px;border:1px solid #ddd;padding:10px;background:#fff;">
+      <p style="margin-top:15px;font-size:14px;color:#667eea;">${data.url}</p>
+    `;
+    
+    window.batchRequestQRData = data.qrCode;
+  } catch (err) {
+    document.getElementById('batch-request-qrcode').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">❌</div>
+        <div>加载失败：${err.message}</div>
+      </div>
+    `;
+  }
+}
+
+// 下载批量领用表单二维码
+function downloadBatchRequestQR() {
+  if (!window.batchRequestQRData) {
+    alert('请先加载二维码');
+    return;
+  }
+  
+  const link = document.createElement('a');
+  link.download = '批量领用表单二维码.png';
+  link.href = window.batchRequestQRData;
+  link.click();
+}
+
+// 打开批量领用表单
+function openFormClaim() {
+  window.open('/batch-request', '_blank');
 }
 
 // 加载物品变化趋势

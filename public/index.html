@@ -37,6 +37,10 @@
           <span class="icon">📷</span>
           <span>扫码登记</span>
         </a>
+        <a href="/batch-request.html" class="nav-item" target="_blank">
+          <span class="icon">📝</span>
+          <span>批量领用</span>
+        </a>
         <a href="#" class="nav-item" data-page="backups" id="nav-backups" style="display: none;">
           <span class="icon">💾</span>
           <span>备份管理</span>
@@ -125,6 +129,8 @@
           <div style="display:flex;gap:10px;">
             <button class="btn btn-primary" onclick="showModal('addAssetModal')">+ 新增资产</button>
             <a href="/batch-print" target="_blank" class="btn btn-success">🖨️ 批量打印二维码</a>
+            <button class="btn btn-info" onclick="generateFormClaimQR()" style="margin-left:10px;">📋 表单领用二维码</button>
+            <a href="/batch-request" target="_blank" class="btn btn-primary">📋 批量领用表单</a>
             <button class="btn btn-secondary" onclick="exportAssets()">📥 导出 Excel</button>
             <button class="btn btn-secondary" onclick="showImportModal()">📤 批量入库</button>
           </div>
@@ -307,6 +313,7 @@
               <button class="btn btn-danger" onclick="openStockOut(currentAssetId)">📤 出库</button>
               <button class="btn btn-secondary" onclick="openQRCode(currentAssetId)">📱 二维码</button>
               <button class="btn btn-info" onclick="openTransactions(currentAssetId)">📋 出入库记录</button>
+              <button class="btn btn-primary" onclick="navigateTo('page-batch-request-qr')">📋 批量领用表单</button>
             </div>
             
             <!-- 物品变化趋势 -->
@@ -461,6 +468,43 @@
         </div>
       </section>
 
+      <!-- 子页面：表单领用 -->
+      <section id="page-form-claim" class="page sub-page">
+        <header class="page-header">
+          <button class="btn btn-secondary" onclick="navigateTo('assets')">← 返回首页</button>
+          <h2>📋 批量领用表单</h2>
+        </header>
+        <div class="page-content">
+          <div class="form-section">
+            <h3>📦 选择物品</h3>
+            <div id="claim-items-list" class="claim-items-list"></div>
+            <button class="btn btn-secondary" onclick="addClaimItem()" style="margin-top:10px;">+ 添加物品</button>
+          </div>
+          
+          <div class="form-section" style="margin-top:20px;">
+            <h3>👤 领用信息</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>科室 *</label>
+                <input type="text" id="claim-department" class="form-input" placeholder="例如：技术部" required>
+              </div>
+              <div class="form-group">
+                <label>房间号</label>
+                <input type="text" id="claim-room" class="form-input" placeholder="例如：A-101">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>备注</label>
+              <textarea id="claim-notes" class="form-input" rows="2" placeholder="备注信息..."></textarea>
+            </div>
+          </div>
+          
+          <div class="form-actions" style="margin-top:20px;">
+            <button class="btn btn-primary" onclick="submitClaimForm()" style="width:100%;padding:14px;">✅ 提交领用</button>
+          </div>
+        </div>
+      </section>
+
       <!-- 子页面：出入库记录 -->
       <section id="page-transactions" class="page sub-page">
         <header class="page-header">
@@ -468,6 +512,19 @@
           <h2>📋 出入库记录</h2>
         </header>
         <div id="transactions-content" class="page-content"></div>
+      </section>
+
+      <!-- 子页面：批量领用表单二维码 -->
+      <section id="page-batch-request-qr" class="page sub-page">
+        <header class="page-header">
+          <button class="btn btn-secondary" onclick="navigateTo('assets')">← 返回</button>
+          <h2>📋 批量领用表单二维码</h2>
+        </header>
+        <div class="page-content" style="text-align:center;padding:40px;">
+          <div id="batch-request-qrcode"></div>
+          <p style="margin-top:20px;color:#666;">扫描此二维码进入批量领用申请页面</p>
+          <button class="btn btn-success" onclick="downloadBatchRequestQR()" style="margin-top:15px;">💾 下载二维码</button>
+        </div>
       </section>
 
       <!-- 账号管理页面 -->
@@ -804,6 +861,20 @@
     </div>
   </div>
 
-  <script src="app.js?v=202604021000"></script>
+  <style>
+    .claim-items-list { display: flex; flex-direction: column; gap: 10px; }
+    .claim-item-row { display: flex; gap: 10px; align-items: center; background: #f9fafb; padding: 10px; border-radius: 8px; flex-wrap: wrap; }
+    .claim-item-row select { flex: 2; min-width: 150px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; }
+    .claim-item-row input[type="number"] { width: 80px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; }
+    .claim-item-row .btn-remove { background: #ef4444; color: white; border: none; border-radius: 4px; width: 30px; height: 30px; cursor: pointer; }
+    .form-section { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px; }
+    .form-section h3 { margin-bottom: 15px; color: #374151; }
+    .form-input { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: 500; color: #374151; }
+    @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+  </style>
+  <script src="app.js?v=202604021620"></script>
 </body>
 </html>

@@ -100,6 +100,7 @@ async function initDatabase() {
       type TEXT NOT NULL,
       quantity INTEGER NOT NULL,
       person_name TEXT NOT NULL,
+      department TEXT,
       room_number TEXT,
       notes TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -244,15 +245,15 @@ app.post('/api/transactions', (req, res) => {
   const newQuantity = finalType === 'out' ? asset.quantity - quantity : asset.quantity + quantity;
   
   run(`
-    INSERT INTO transactions (asset_id, type, quantity, person_name, room_number, notes)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `, [asset_id, finalType, quantity, finalPersonName, finalRoomNumber, finalNotes]);
+    INSERT INTO transactions (asset_id, type, quantity, person_name, department, room_number, notes)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `, [asset_id, finalType, quantity, finalPersonName, req.body.department || '', finalRoomNumber, finalNotes]);
   
   run('UPDATE assets SET quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [newQuantity, asset_id]);
   
   const action = finalType === 'out' ? '领用' : '归还';
   res.json({ success: true, newQuantity, asset_name: asset.name });
-  logOperation('TRANSACTION', 'api', `${action}资产：${asset.name} x${quantity} (领用人：${finalPersonName})`);
+  logOperation('TRANSACTION', 'api', `${action}资产：${asset.name} x${quantity} (领用人：${finalPersonName}, 科室：${req.body.department || '-'})`);
 });
 
 // 领用 API（简化版）
@@ -313,6 +314,22 @@ app.get('/api/assets/:id/qrcode', (req, res) => {
     const filename = `${asset.name.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_')}-二维码.png`;
     res.json({ qrCode: qrCode, download: { filename } });
   }
+});
+
+// 获取批量领用表单二维码
+app.get('/api/batch-form/qrcode', (req, res) => {
+  const baseUrl = process.env.BASE_URL || 'http://localhost:' + PORT;
+  const formUrl = `${baseUrl}/batch-request.html`;
+  
+  QRCode.toDataURL(formUrl, (err, url) => {
+    if (err) return res.status(500).json({ error: '生成二维码失败' });
+    
+    res.json({
+      qrCode: url,
+      download: { filename: '批量领用表单-二维码.png' },
+      formUrl: formUrl
+    });
+  });
 });
 
 // 获取交易记录

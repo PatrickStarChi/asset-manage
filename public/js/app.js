@@ -544,3 +544,136 @@ document.addEventListener('click', (e) => {
     closeModal();
   }
 });
+
+// ==================== 表单领用功能 ====================
+
+// 缓存所有资产列表
+let allAssetsCache = [];
+
+// 打开表单领用页面
+async function openFormClaim() {
+  try {
+    const res = await fetch(`${API_BASE}/assets`);
+    allAssetsCache = await res.json();
+    
+    const container = document.getElementById('claim-items-list');
+    if (container) {
+      container.innerHTML = '';
+      addClaimItem();
+    }
+    
+    document.getElementById('claim-department').value = '';
+    document.getElementById('claim-room').value = '';
+    document.getElementById('claim-notes').value = '';
+    
+    navigateTo('form-claim');
+  } catch (error) {
+    showToast('加载资产列表失败：' + error.message);
+  }
+}
+
+// 添加物品选择行
+function addClaimItem() {
+  const container = document.getElementById('claim-items-list');
+  if (!container) return;
+  
+  const row = document.createElement('div');
+  row.className = 'claim-item-row';
+  
+  const select = document.createElement('select');
+  select.className = 'claim-asset-select';
+  select.innerHTML = '<option value="">-- 选择物品 --</option>' + 
+    allAssetsCache.map(a => `<option value="${a.id}" data-qty="${a.quantity}" data-unit="${a.unit}">${a.name} (库存：${a.quantity} ${a.unit})</option>`).join('');
+  
+  const qtyInput = document.createElement('input');
+  qtyInput.type = 'number';
+  qtyInput.className = 'claim-qty-input';
+  qtyInput.min = '1';
+  qtyInput.value = '1';
+  qtyInput.placeholder = '数量';
+  
+  const removeBtn = document.createElement('button');
+  removeBtn.className = 'btn-remove';
+  removeBtn.innerHTML = '×';
+  removeBtn.onclick = () => row.remove();
+  
+  row.appendChild(select);
+  row.appendChild(qtyInput);
+  row.appendChild(removeBtn);
+  container.appendChild(row);
+}
+
+// 提交表单领用
+async function submitClaimForm() {
+  const department = document.getElementById('claim-department').value.trim();
+  const room = document.getElementById('claim-room').value.trim();
+  const notes = document.getElementById('claim-notes').value.trim();
+  
+  if (!department) {
+    showToast('请填写科室');
+    return;
+  }
+  
+  const rows = document.querySelectorAll('.claim-item-row');
+  const items = [];
+  
+  for (const row of rows) {
+    const select = row.querySelector('.claim-asset-select');
+    const qtyInput = row.querySelector('.claim-qty-input');
+    
+    const assetId = select.value;
+    const quantity = parseInt(qtyInput.value);
+    
+    if (assetId && quantity > 0) {
+      const asset = allAssetsCache.find(a => a.id === assetId);
+      if (asset) {
+        if (quantity > asset.quantity) {
+          showToast(`库存不足：${asset.name} 只有 ${asset.quantity}`);
+          return;
+        }
+        items.push({ asset_id: assetId, asset_name: asset.name, quantity, unit: asset.unit });
+      }
+    }
+  }
+  
+  if (items.length === 0) {
+    showToast('请至少选择一个物品');
+    return;
+  }
+  
+  try {
+    for (const item of items) {
+      await fetch(`${API_BASE}/transactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          asset_id: item.asset_id,
+          type: 'out',
+          quantity: item.quantity,
+          person_name: '表单领用',
+          room_number: room,
+          notes: `${department}${room ? ' - ' + room : ''}${notes ? ' - ' + notes : ''}`
+        })
+      });
+    }
+    
+    showToast(`✅ 领用成功！共 ${items.length} 种物品`);
+    navigateTo('assets');
+  } catch (error) {
+    showToast('提交失败：' + error.message);
+  }
+}
+
+// 生成表单领用二维码
+async function generateFormClaimQR() {
+  const url = window.location.origin + '/#form-claim';
+  const canvas = document.createElement('canvas');
+  await QRCode.toCanvas(canvas, url, { width: 300, margin: 2 });
+  
+  const container = document.getElementById('qrcode-canvas-container');
+  container.innerHTML = '';
+  container.appendChild(canvas);
+  
+  document.getElementById('qrcode-asset-name').textContent = '批量领用表单';
+  navigateTo('qrcode');
+}
