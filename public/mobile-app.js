@@ -51,7 +51,7 @@ document.getElementById('mobile-login-form').addEventListener('submit', async (e
   const password = document.getElementById('mobile-login-password').value;
   
   try {
-    const res = await fetch('/api/login', {
+    const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
@@ -127,7 +127,10 @@ function switchTab(tab) {
 // 加载仪表盘
 async function loadDashboard() {
   try {
-    const res = await fetch('/api/stats');
+    const token = localStorage.getItem('token');
+    const res = await fetch('/api/stats', {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
     const stats = await res.json();
     
     document.getElementById('m-total-assets').textContent = stats.totalAssets || 0;
@@ -159,7 +162,10 @@ async function loadDashboard() {
 // 加载资产列表
 async function loadAssets() {
   try {
-    const res = await fetch('/api/assets');
+    const token = localStorage.getItem('token');
+    const res = await fetch('/api/assets', {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
     const assets = await res.json();
     
     const container = document.getElementById('m-assets-list');
@@ -190,7 +196,10 @@ async function showAssetModal(id) {
   currentAssetId = id;
   
   try {
-    const res = await fetch(`/api/assets/${id}`);
+    const token = localStorage.getItem('token');
+    const res = await fetch(`/api/assets/${id}`, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
     const asset = await res.json();
     
     document.getElementById('m-detail-name').textContent = asset.name;
@@ -239,7 +248,10 @@ function mobileStockOut() {
 // 加载入库记录
 async function loadInTransactions() {
   try {
-    const res = await fetch('/api/transactions?type=in');
+    const token = localStorage.getItem('token');
+    const res = await fetch('/api/transactions?type=in', {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
     const transactions = await res.json();
     
     const container = document.getElementById('m-in-list');
@@ -252,7 +264,10 @@ async function loadInTransactions() {
 // 加载出库记录
 async function loadOutTransactions() {
   try {
-    const res = await fetch('/api/transactions?type=out');
+    const token = localStorage.getItem('token');
+    const res = await fetch('/api/transactions?type=out', {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
     const transactions = await res.json();
     
     const container = document.getElementById('m-out-list');
@@ -320,7 +335,10 @@ async function mobileHandleScan() {
     
     // 4. 通过 qr_code 匹配
     if (!asset) {
-      const assetsRes = await fetch('/api/assets');
+      const token = localStorage.getItem('token');
+      const assetsRes = await fetch('/api/assets', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
       const assets = await assetsRes.json();
       asset = assets.find(a => a.qr_code === qrCode);
     }
@@ -408,7 +426,10 @@ document.getElementById('m-search-input').addEventListener('input', async (e) =>
   }
   
   try {
-    const res = await fetch('/api/assets');
+    const token = localStorage.getItem('token');
+    const res = await fetch('/api/assets', {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
     const assets = await res.json();
     
     const filtered = assets.filter(a => 

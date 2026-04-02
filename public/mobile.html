@@ -9,7 +9,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#667eea">
   <title>资产管理 - 移动版</title>
+  <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="mobile-style.css">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
 </head>
 <body>
   <!-- 登录页 -->
@@ -167,5 +169,19 @@
   </div>
 
   <script src="mobile-app.js"></script>
+  <script>
+    // 注册 Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((registration) => {
+            console.log('✅ Service Worker 已注册:', registration.scope);
+          })
+          .catch((error) => {
+            console.log('❌ Service Worker 注册失败:', error);
+          });
+      });
+    }
+  </script>
 </body>
 </html>

@@ -1,0 +1,26 @@
+{
+  "name": "资产管理系统",
+  "short_name": "资产管理",
+  "description": "办公用品资产管理系统 - 支持二维码扫描登记",
+  "start_url": "/mobile",
+  "display": "standalone",
+  "background_color": "#f5f7fa",
+  "theme_color": "#667eea",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "lang": "zh-CN"
+}
