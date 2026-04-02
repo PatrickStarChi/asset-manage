@@ -429,8 +429,8 @@ app.get('/api/stats', (req, res) => {
               (err, row) => {
                 stats.monthOut = row?.total || 0;
 
-                // 库存预警（数量少于 5 的资产）
-                db.all('SELECT id, name, quantity, category FROM assets WHERE quantity < 5', (err, rows) => {
+                // 库存预警（数量低于最低库存的资产）
+                db.all('SELECT id, name, quantity, category, min_quantity FROM assets WHERE quantity < COALESCE(min_quantity, 5)', (err, rows) => {
                   stats.lowStock = rows || [];
                   res.json(stats);
                 });
