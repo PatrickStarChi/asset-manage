@@ -225,8 +225,8 @@ function navigateTo(pageId) {
   // 隐藏所有页面
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   
-  // 显示目标页面
-  const targetPage = document.getElementById(pageId.startsWith('page-') ? pageId : pageId);
+  // 显示目标页面（先尝试带 page- 前缀，再尝试不带前缀）
+  const targetPage = document.getElementById('page-' + pageId) || document.getElementById(pageId);
   if (targetPage) {
     targetPage.classList.add('active');
   }
@@ -248,13 +248,17 @@ function navigateTo(pageId) {
   else if (pageId === 'users') loadUsers();
 }
 
-// 页面加载完成
-document.addEventListener('DOMContentLoaded', () => {
-  checkAuth();
-  initNavigation();
-  loadDashboard();
-  loadCategories();
-  setupEventListeners();
+// 页面加载完成 - 先检查登录状态
+document.addEventListener('DOMContentLoaded', async () => {
+  await checkAuth();
+  // 如果已登录，继续初始化
+  if (currentUser) {
+    initNavigation();
+    loadDashboard();
+    loadCategories();
+    setupEventListeners();
+  }
+  // 如果未登录，checkAuth 已跳转到登录页，不再执行后续代码
 });
 
 // 检查登录状态
