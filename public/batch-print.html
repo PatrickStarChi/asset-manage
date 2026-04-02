@@ -229,7 +229,29 @@
       }
     }
   </style>
+  <!-- 二维码生成库 -->
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script>
+    // 检查 QRCode 库是否加载成功
+    window.addEventListener('DOMContentLoaded', () => {
+      if (typeof QRCode === 'undefined') {
+        console.error('QRCode 库加载失败，尝试备用 CDN...');
+        // 备用 CDN
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js';
+        script.onload = () => {
+          if (typeof QRCode === 'undefined') {
+            alert('二维码库加载失败，请检查网络连接后刷新页面');
+          } else {
+            console.log('✅ 从备用 CDN 加载成功');
+          }
+        };
+        document.head.appendChild(script);
+      } else {
+        console.log('✅ QRCode 库加载成功');
+      }
+    });
+  </script>
 </head>
 <body>
   <!-- 选择区域 -->
@@ -252,7 +274,13 @@
     <div class="button-group">
       <button class="btn btn-primary" onclick="selectAll()">全选</button>
       <button class="btn btn-primary" onclick="deselectAll()">取消全选</button>
+      <button class="btn btn-primary" onclick="testQRCode()">🧪 测试二维码</button>
       <button class="btn btn-success" onclick="generatePrint()">🖨️ 生成打印</button>
+    </div>
+    
+    <div id="test-result" style="margin-top: 15px; padding: 10px; background: #f9fafb; border-radius: 6px; display: none;">
+      <strong>测试结果：</strong>
+      <div id="test-output"></div>
     </div>
   </div>
 
@@ -376,14 +404,24 @@
       const assetUrl = `${baseUrl}/asset/${asset.id}`;
       
       try {
+        console.log('正在生成资产二维码:', asset.name, asset.id);
+        
+        // 检查 QRCode 库
+        if (typeof QRCode === 'undefined') {
+          throw new Error('QRCode 库未加载');
+        }
+        
         const qrCode = await QRCode.toDataURL(assetUrl, {
           width: 200,
           margin: 1,
+          errorCorrectionLevel: 'M',
           color: {
             dark: '#000000',
             light: '#ffffff'
           }
         });
+        
+        console.log('二维码生成成功:', asset.name);
         
         card.innerHTML = `
           <img src="${qrCode}" alt="QR Code">
@@ -391,8 +429,11 @@
           <div class="asset-info">${asset.category} | 库存：${asset.quantity}</div>
         `;
       } catch (err) {
+        console.error('二维码生成失败:', asset.name, err);
         card.innerHTML = `
-          <div style="color: red; font-size: 10px;">生成失败</div>
+          <div style="color: red; font-size: 10px; text-align: center;">
+            ❌ 生成失败<br>${err.message}
+          </div>
           <div class="asset-name">${asset.name}</div>
         `;
       }
@@ -400,6 +441,36 @@
       return card;
     }
 
+    // 测试二维码生成
+    async function testQRCode() {
+      const testDiv = document.getElementById('test-result');
+      const output = document.getElementById('test-output');
+      testDiv.style.display = 'block';
+      
+      try {
+        if (typeof QRCode === 'undefined') {
+          output.innerHTML = '<span style="color: red;">❌ QRCode 库未加载</span>';
+          return;
+        }
+        
+        output.innerHTML = '<span style="color: blue;">⏳ 正在生成测试二维码...</span>';
+        
+        const testUrl = window.location.origin + '/test';
+        const qrCode = await QRCode.toDataURL(testUrl, {
+          width: 200,
+          margin: 1,
+          errorCorrectionLevel: 'M'
+        });
+        
+        output.innerHTML = `
+          <span style="color: green;">✅ 二维码库工作正常！</span><br>
+          <img src="${qrCode}" style="margin-top: 10px; border: 1px solid #ddd;">
+        `;
+      } catch (err) {
+        output.innerHTML = `<span style="color: red;">❌ 错误：${err.message}</span>`;
+      }
+    }
+    
     // 初始化
     loadAssets();
   </script>
