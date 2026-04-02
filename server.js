@@ -35,6 +35,11 @@ app.get('/mobile', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'mobile.html'));
 });
 
+// 批量打印页面路由
+app.get('/batch-print', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'batch-print.html'));
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // 认证中间件
