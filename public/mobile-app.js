@@ -118,6 +118,18 @@ async function toggleCamera() {
     cameraArea.classList.remove('active');
     cameraBtn.textContent = '📷 打开摄像头';
   } else {
+    // 检查 HTTPS
+    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+      alert('⚠️ 摄像头需要 HTTPS 环境\n\n生产环境请使用 HTTPS 访问\n或使用 localhost 测试');
+      return;
+    }
+    
+    // 检查浏览器支持
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert('❌ 您的浏览器不支持摄像头功能\n\n请使用 Chrome、Safari 或 Firefox');
+      return;
+    }
+    
     // 打开摄像头
     try {
       cameraStream = await navigator.mediaDevices.getUserMedia({
@@ -129,11 +141,19 @@ async function toggleCamera() {
       cameraBtn.textContent = '📷 关闭摄像头';
       isCameraOpen = true;
       
+      console.log('✅ 摄像头已启动');
+      
       // 开始扫描
       startScanLoop();
     } catch (err) {
       console.error('摄像头启动失败:', err);
-      alert('无法访问摄像头，请手动输入资产 ID');
+      let msg = '无法访问摄像头';
+      if (err.name === 'NotAllowedError') {
+        msg = '❌ 摄像头权限被拒绝\n\n请在浏览器设置中允许摄像头权限';
+      } else if (err.name === 'NotFoundError') {
+        msg = '❌ 未找到摄像头设备';
+      }
+      alert(msg + '\n\n您可以手动输入资产 ID');
     }
   }
 }
