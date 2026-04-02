@@ -8,7 +8,8 @@ package-lock.json
 *.db
 !db/assets.db
 
-# 备份文件
+# ⚠️ 备份文件 - 重要数据，禁止删除！
+# 本地保留，不上传到 Git
 backups/*.db.*
 backups/*.backup.*
 
@@ -47,3 +48,5 @@ nginx.conf
 # IDE
 .vscode/
 .idea/
+
+# ⚠️ 安全提示：backups/ 目录包含重要数据，请勿手动删除
