@@ -228,6 +228,11 @@
             <input type="hidden" id="asset-name" value="${currentAsset.name}">
             
             <div class="form-group">
+              <label>领用人 <span class="required">*</span></label>
+              <input type="text" name="operator" required class="form-input" placeholder="请输入姓名" id="operator-input">
+            </div>
+            
+            <div class="form-group">
               <label>领用数量（${currentAsset.unit}）<span class="required">*</span></label>
               <input type="number" name="quantity" required min="1" max="${availableStock}" 
                      value="1" class="form-input" id="quantity-input">
@@ -263,7 +268,6 @@
       e.preventDefault();
       const form = e.target;
       const submitBtn = form.querySelector('.btn[type="submit"]');
-      const originalText = submitBtn.textContent;
       
       submitBtn.disabled = true;
       submitBtn.textContent = '处理中...';
@@ -272,9 +276,9 @@
         asset_id: parseInt(document.getElementById('asset-id').value),
         asset_name: document.getElementById('asset-name').value,
         quantity: parseInt(form.quantity.value),
-        operator: form.operator.value,
-        location: form.location.value,
-        remark: form.remark.value || '领用'
+        person_name: form.operator.value,  // 领用人
+        room_number: form.location.value,  // 房间号
+        notes: form.remark.value || '领用'  // 备注
       };
       
       try {
@@ -291,8 +295,8 @@
             <div class="success">
               <h3>✅ 领用成功！</h3>
               <p style="margin: 15px 0;">物品：<strong>${data.asset_name}</strong></p>
-              <p>领用人：<strong>${data.operator}</strong></p>
-              <p>房间号：<strong>${data.location}</strong></p>
+              <p>领用人：<strong>${data.person_name}</strong></p>
+              <p>房间号：<strong>${data.room_number || '-'}</strong></p>
               <p>数量：<strong>${data.quantity}</strong></p>
               <p style="margin-top: 15px; font-size: 13px; color: #7f8c8d;">
                 ${new Date().toLocaleString('zh-CN')}
@@ -313,6 +317,9 @@
             <a href="/" class="btn btn-secondary" style="display:block;text-align:center;text-decoration:none;margin-top:10px;">返回首页</a>
           </div>
         `;
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '✅ 确认领用';
       }
     }
     

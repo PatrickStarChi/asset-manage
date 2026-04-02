@@ -219,29 +219,75 @@ app.delete('/api/assets/:id', (req, res) => {
   logOperation('DELETE', 'api', `删除资产：${asset?.name || req.params.id}`);
 });
 
-// 资产领用/归还
+// 资产领用/归还（兼容旧版字段）
 app.post('/api/transactions', (req, res) => {
-  const { asset_id, type, quantity, person_name, room_number, notes } = req.body;
+  // 兼容两种字段名
+  const { asset_id, type, quantity, person_name, operator, room_number, location, notes, remark } = req.body;
+  
+  const finalPersonName = person_name || operator;
+  const finalRoomNumber = room_number || location || '';
+  const finalNotes = notes || remark || '领用';
+  
+  if (!asset_id || !quantity || !finalPersonName) {
+    return res.status(400).json({ error: '缺少必填字段：资产 ID、数量、领用人' });
+  }
   
   const asset = queryOne('SELECT * FROM assets WHERE id = ?', [asset_id]);
   if (!asset) return res.status(404).json({ error: '资产不存在' });
   
-  if (type === 'out' && asset.quantity < quantity) {
+  const finalType = type || 'out';
+  
+  if (finalType === 'out' && asset.quantity < quantity) {
     return res.status(400).json({ error: '库存不足' });
   }
   
-  const newQuantity = type === 'out' ? asset.quantity - quantity : asset.quantity + quantity;
+  const newQuantity = finalType === 'out' ? asset.quantity - quantity : asset.quantity + quantity;
   
   run(`
     INSERT INTO transactions (asset_id, type, quantity, person_name, room_number, notes)
     VALUES (?, ?, ?, ?, ?, ?)
-  `, [asset_id, type, quantity, person_name, room_number || '', notes || '']);
+  `, [asset_id, finalType, quantity, finalPersonName, finalRoomNumber, finalNotes]);
   
   run('UPDATE assets SET quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [newQuantity, asset_id]);
   
-  const action = type === 'out' ? '领用' : '归还';
-  res.json({ success: true, newQuantity });
-  logOperation('TRANSACTION', 'api', `${action}资产：${asset.name} x${quantity} (领用人：${person_name})`);
+  const action = finalType === 'out' ? '领用' : '归还';
+  res.json({ success: true, newQuantity, asset_name: asset.name });
+  logOperation('TRANSACTION', 'api', `${action}资产：${asset.name} x${quantity} (领用人：${finalPersonName})`);
+});
+
+// 领用 API（简化版）
+app.post('/api/transactions/out', (req, res) => {
+  req.body.type = 'out';
+  // 调用主处理函数
+  const originalSend = res.send;
+  res.send = function(data) {
+    return originalSend.call(this, data);
+  };
+  // 重新调用
+  const { asset_id, quantity, operator, location, remark, asset_name } = req.body;
+  req.body.person_name = operator;
+  req.body.room_number = location;
+  req.body.notes = remark || '领用';
+  
+  // 直接处理
+  const asset = queryOne('SELECT * FROM assets WHERE id = ?', [asset_id]);
+  if (!asset) return res.status(404).json({ error: '资产不存在' });
+  
+  if (asset.quantity < quantity) {
+    return res.status(400).json({ error: '库存不足' });
+  }
+  
+  const newQuantity = asset.quantity - quantity;
+  
+  run(`
+    INSERT INTO transactions (asset_id, type, quantity, person_name, room_number, notes)
+    VALUES (?, 'out', ?, ?, ?, ?)
+  `, [asset_id, quantity, operator, location || '', remark || '领用']);
+  
+  run('UPDATE assets SET quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [newQuantity, asset_id]);
+  
+  res.json({ success: true, newQuantity, asset_name: asset.name || asset_name });
+  logOperation('TRANSACTION', 'api', `领用资产：${asset.name} x${quantity} (领用人：${operator})`);
 });
 
 // 获取资产二维码
